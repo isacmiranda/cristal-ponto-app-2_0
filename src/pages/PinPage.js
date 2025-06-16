@@ -1,33 +1,67 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 export default function PinPage() {
   const [pin, setPin] = useState('');
   const [mensagem, setMensagem] = useState('');
   const [horaAtual, setHoraAtual] = useState('');
+  const [temperatura, setTemperatura] = useState(null);
+  const [iconeClima, setIconeClima] = useState('');
+  const [fotoFuncionario, setFotoFuncionario] = useState('');
+  const [funcionarios, setFuncionarios] = useState([]);
   const navigate = useNavigate();
 
-  // Carregar os funcionários do localStorage
-  const funcionarios = JSON.parse(localStorage.getItem('funcionarios')) || [];
+  const weatherIcons = useMemo(() => ({
+    0: "☀️", 1: "🌤️", 2: "⛅", 3: "☁️",
+    45: "🌫️", 48: "🌫️", 51: "🌦️", 53: "🌦️", 55: "🌧️",
+    61: "🌧️", 63: "🌧️", 65: "🌧️", 66: "🌨️", 67: "🌨️",
+    71: "🌨️", 73: "🌨️", 75: "❄️", 80: "🌧️", 81: "🌧️", 82: "🌧️"
+  }), []);
 
   useEffect(() => {
+    const atualizarHora = () => {
+      const agora = new Date();
+      setHoraAtual(agora.toLocaleTimeString('pt-BR'));
+    };
+
+    const buscarPrevisaoTempo = async () => {
+      try {
+        const res = await fetch('https://api.open-meteo.com/v1/forecast?latitude=-23.55&longitude=-46.63&current_weather=true');
+        const data = await res.json();
+        const temp = data.current_weather.temperature;
+        const codigo = data.current_weather.weathercode;
+        setTemperatura(temp);
+        setIconeClima(weatherIcons[codigo] || '🌡️');
+      } catch (error) {
+        console.error('Erro ao buscar previsão do tempo:', error);
+      }
+    };
+
+    const buscarFuncionarios = async () => {
+      try {
+        const res = await fetch('https://backend-ponto-digital-1.onrender.com/funcionarios');
+        const data = await res.json();
+        setFuncionarios(data);
+      } catch (err) {
+        console.error('Erro ao buscar funcionários:', err);
+      }
+    };
+
     atualizarHora();
     const intervalo = setInterval(atualizarHora, 1000);
+    buscarPrevisaoTempo();
+    buscarFuncionarios();
+
     return () => clearInterval(intervalo);
-  }, []);
+  }, [weatherIcons]);
 
-  const atualizarHora = () => {
-    const agora = new Date();
-    setHoraAtual(agora.toLocaleTimeString('pt-BR'));
-  };
-
-  const registrarPonto = () => {
+  const registrarPonto = async () => {
     if (!pin) return;
 
     const funcionario = funcionarios.find((f) => f.pin === pin);
-
     if (!funcionario) {
       setMensagem('PIN inválido!');
+      setFotoFuncionario('');
       setPin('');
       return;
     }
@@ -36,41 +70,40 @@ export default function PinPage() {
     const data = agora.toLocaleDateString('pt-BR');
     const horario = agora.toLocaleTimeString('pt-BR');
 
-    const registros = JSON.parse(localStorage.getItem('registros')) || [];
+    try {
+      const response = await fetch(`https://backend-ponto-digital-1.onrender.com/registros/ultimo/${pin}`);
+      const ultimo = await response.json();
+      const tipoRegistro = !ultimo || ultimo.tipo === 'saida' ? 'entrada' : 'saida';
 
-    // Verifica o último registro do dia
-    const registrosDoDia = registros.filter(
-      (r) => r.pin === pin && r.data === data
-    );
-    const ultimoRegistro = registrosDoDia[registrosDoDia.length - 1];
+      await fetch('https://backend-ponto-digital-1.onrender.com/registros', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          pin,
+          nome: funcionario.nome,
+          data,
+          horario,
+          tipo: tipoRegistro
+        })
+      });
 
-    const tipoRegistro =
-      !ultimoRegistro || ultimoRegistro.tipo === 'saida' ? 'entrada' : 'saida';
-
-    registros.push({
-      pin,
-      nome: funcionario.nome, // <-- Correção aqui
-      data,
-      tipo: tipoRegistro,
-      horario
-    });
-
-    localStorage.setItem('registros', JSON.stringify(registros));
-
-    const nomeFuncionario = funcionario?.nome || 'Funcionário';
-
-    const mensagemFinal =
-      tipoRegistro === 'entrada'
-        ? `Bom trabalho, ${nomeFuncionario}!`
-        : `Até logo, ${nomeFuncionario}!`;
-
-    setMensagem(mensagemFinal);
-    setPin('');
+      setFotoFuncionario(funcionario.foto || '');
+      setMensagem(tipoRegistro === 'entrada'
+        ? `Bom trabalho, ${funcionario.nome}!`
+        : `Até logo, ${funcionario.nome}!`
+      );
+      setPin('');
+    } catch (err) {
+      console.error('Erro ao registrar ponto:', err);
+      setMensagem('Erro ao registrar ponto!');
+    }
   };
 
   const handleTecla = (valor) => {
     if (valor === 'C') {
       setPin('');
+      setMensagem('');
+      setFotoFuncionario('');
     } else if (valor === 'OK') {
       registrarPonto();
     } else {
@@ -84,12 +117,27 @@ export default function PinPage() {
     <div className="min-h-screen bg-gradient-to-b from-blue-900 to-blue-500 text-white flex flex-col items-center justify-center px-4 py-6">
       <div className="text-center mb-6">
         <h1 className="text-2xl md:text-3xl font-bold mb-1">Sistema de Ponto Cristal Acquacenter</h1>
-        <p className="text-lg md:text-xl">{horaAtual}</p>
+        <p className="text-lg md:text-xl flex items-center justify-center gap-4">
+          🕒 {horaAtual}
+          {temperatura !== null && (
+            <span>{iconeClima} {temperatura}°C</span>
+          )}
+        </p>
       </div>
 
       <div className="text-3xl md:text-4xl tracking-widest bg-white/20 py-3 px-8 rounded-xl mb-6">
         {pin.replace(/./g, '●')}
       </div>
+
+      {fotoFuncionario && (
+        <div className="mb-6 flex justify-center items-center">
+          <img
+            src={fotoFuncionario}
+            alt="Foto do funcionário"
+            className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-lg"
+          />
+        </div>
+      )}
 
       <div className="grid grid-cols-3 gap-4 max-w-[300px] sm:max-w-[360px] md:max-w-[400px]">
         {teclas.map((tecla, i) => (
@@ -122,4 +170,3 @@ export default function PinPage() {
     </div>
   );
 }
-
