@@ -9,6 +9,7 @@ export default function PinPage() {
   const [iconeClima, setIconeClima] = useState('');
   const [fotoFuncionario, setFotoFuncionario] = useState('');
   const [funcionarios, setFuncionarios] = useState([]);
+  const [bloqueado, setBloqueado] = useState(false);
   const navigate = useNavigate();
 
   const weatherIcons = useMemo(() => ({
@@ -55,14 +56,23 @@ export default function PinPage() {
     return () => clearInterval(intervalo);
   }, [weatherIcons]);
 
-  const registrarPonto = async () => {
-    if (!pin) return;
+  useEffect(() => {
+    if (mensagem) {
+      const timer = setTimeout(() => setMensagem(''), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [mensagem]);
 
+  const registrarPonto = async () => {
+    if (!pin || bloqueado) return;
+
+    setBloqueado(true);
     const funcionario = funcionarios.find((f) => f.pin === pin);
     if (!funcionario) {
       setMensagem('PIN inválido!');
       setFotoFuncionario('');
       setPin('');
+      setBloqueado(false);
       return;
     }
 
@@ -96,6 +106,8 @@ export default function PinPage() {
     } catch (err) {
       console.error('Erro ao registrar ponto:', err);
       setMensagem('Erro ao registrar ponto!');
+    } finally {
+      setTimeout(() => setBloqueado(false), 2000); // libera após 2s
     }
   };
 
@@ -105,7 +117,7 @@ export default function PinPage() {
       setMensagem('');
       setFotoFuncionario('');
     } else if (valor === 'OK') {
-      registrarPonto();
+      if (pin) registrarPonto();
     } else {
       if (pin.length < 6) setPin(pin + valor);
     }
@@ -144,11 +156,13 @@ export default function PinPage() {
           <button
             key={i}
             onClick={() => handleTecla(tecla)}
+            disabled={bloqueado && tecla === 'OK'}
             className={`w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 
               rounded-full font-bold text-xl sm:text-2xl shadow flex items-center justify-center
               ${tecla === 'OK' ? 'bg-green-600 text-white hover:bg-green-500' :
                 tecla === 'C' ? 'bg-red-600 text-white hover:bg-red-500' :
-                'bg-white text-blue-900 hover:bg-blue-100'}`}
+                'bg-white text-blue-900 hover:bg-blue-100'}
+              ${bloqueado && tecla === 'OK' ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             {tecla}
           </button>
