@@ -20,7 +20,7 @@ export default function AdminPage() {
 
   const buscarFuncionarios = async () => {
     try {
-      const response = await axios.get(`${API_BASE}/api/funcionarios`);
+      const response = await axios.get(`${API_BASE}/funcionarios`);
       setFuncionarios(response.data);
     } catch (error) {
       console.error('Erro ao buscar funcionários:', error);
@@ -29,7 +29,7 @@ export default function AdminPage() {
 
   const buscarRegistros = async () => {
     try {
-      const response = await axios.get(`${API_BASE}/api/registros`);
+      const response = await axios.get(`${API_BASE}/registros`);
       setRegistros(response.data);
     } catch (error) {
       console.error('Erro ao buscar registros:', error);
@@ -39,7 +39,7 @@ export default function AdminPage() {
   const adicionarFuncionario = async () => {
     if (!novoFuncionario.nome || !novoFuncionario.pin) return;
     try {
-      await axios.post(`${API_BASE}/api/funcionarios`, novoFuncionario);
+      await axios.post(`${API_BASE}/funcionarios`, novoFuncionario);
       setNovoFuncionario({ nome: '', pin: '', foto: '' });
       buscarFuncionarios();
     } catch (error) {
@@ -53,7 +53,7 @@ export default function AdminPage() {
     const foto = prompt('Nova URL da Foto:', funcionario.foto);
     if (nome && pin) {
       try {
-        await axios.put(`${API_BASE}/api/funcionarios/${funcionario._id}`, { nome, pin, foto });
+        await axios.put(`${API_BASE}/funcionarios/${funcionario._id}`, { nome, pin, foto });
         buscarFuncionarios();
       } catch (error) {
         console.error('Erro ao editar funcionário:', error);
@@ -63,7 +63,7 @@ export default function AdminPage() {
 
   const excluirFuncionario = async (id) => {
     try {
-      await axios.delete(`${API_BASE}/api/funcionarios/${id}`);
+      await axios.delete(`${API_BASE}/funcionarios/${id}`);
       buscarFuncionarios();
     } catch (error) {
       console.error('Erro ao excluir funcionário:', error);
@@ -72,7 +72,7 @@ export default function AdminPage() {
 
   const excluirRegistro = async (id) => {
     try {
-      await axios.delete(`${API_BASE}/api/registros/${id}`);
+      await axios.delete(`${API_BASE}/registros/${id}`);
       buscarRegistros();
     } catch (error) {
       console.error('Erro ao excluir registro:', error);
@@ -84,7 +84,7 @@ export default function AdminPage() {
     const novoTipo = prompt('Novo tipo (entrada/saida):', registro.tipo);
     if (novoHorario && novoTipo) {
       try {
-        await axios.put(`${API_BASE}/api/registros/${registro._id}`, {
+        await axios.put(`${API_BASE}/registros/${registro._id}`, {
           ...registro,
           horario: novoHorario,
           tipo: novoTipo,
