@@ -13,26 +13,24 @@ export default function PinPage() {
   const navigate = useNavigate();
 
   const weatherIcons = useMemo(() => ({
-    0: "☀️", 1: "🌤️", 2: "⛅", 3: "☁️",
-    45: "🌫️", 48: "🌫️", 51: "🌦️", 53: "🌦️", 55: "🌧️",
-    61: "🌧️", 63: "🌧️", 65: "🌧️", 66: "🌨️", 67: "🌨️",
-    71: "🌨️", 73: "🌨️", 75: "❄️", 80: "🌧️", 81: "🌧️", 82: "🌧️"
+    0: '☀️', 1: '🌤️', 2: '⛅', 3: '☁️',
+    45: '🌫️', 48: '🌫️', 51: '🌦️', 53: '🌦️', 55: '🌧️',
+    61: '🌧️', 63: '🌧️', 65: '🌧️', 66: '🌨️', 67: '🌨️',
+    71: '🌨️', 73: '🌨️', 75: '❄️', 80: '🌧️', 81: '🌧️', 82: '🌧️'
   }), []);
 
   useEffect(() => {
     const atualizarHora = () => {
-      const agora = new Date();
-      setHoraAtual(agora.toLocaleTimeString('pt-BR'));
+      setHoraAtual(new Date().toLocaleTimeString('pt-BR'));
     };
 
     const buscarPrevisaoTempo = async () => {
       try {
         const res = await fetch('https://api.open-meteo.com/v1/forecast?latitude=-23.55&longitude=-46.63&current_weather=true');
         const data = await res.json();
-        const temp = data.current_weather.temperature;
-        const codigo = data.current_weather.weathercode;
-        setTemperatura(temp);
-        setIconeClima(weatherIcons[codigo] || '🌡️');
+        const { temperature, weathercode } = data.current_weather;
+        setTemperatura(temperature);
+        setIconeClima(weatherIcons[weathercode] || '🌡️');
       } catch (error) {
         console.error('Erro ao buscar previsão do tempo:', error);
       }
@@ -43,8 +41,8 @@ export default function PinPage() {
         const res = await fetch('https://backend-ponto-digital-1.onrender.com/funcionarios');
         const data = await res.json();
         setFuncionarios(data);
-      } catch (err) {
-        console.error('Erro ao buscar funcionários:', err);
+      } catch (error) {
+        console.error('Erro ao buscar funcionários:', error);
       }
     };
 
@@ -67,7 +65,8 @@ export default function PinPage() {
     if (!pin || bloqueado) return;
 
     setBloqueado(true);
-    const funcionario = funcionarios.find((f) => f.pin === pin);
+    const funcionario = funcionarios.find(f => f.pin === pin);
+
     if (!funcionario) {
       setMensagem('PIN inválido!');
       setFotoFuncionario('');
@@ -81,9 +80,9 @@ export default function PinPage() {
     const horario = agora.toLocaleTimeString('pt-BR');
 
     try {
-      const response = await fetch(`https://backend-ponto-digital-1.onrender.com/registros/ultimo/${pin}`);
-      const ultimo = await response.json();
-      const tipoRegistro = !ultimo || ultimo.tipo === 'saida' ? 'entrada' : 'saida';
+      const res = await fetch(`https://backend-ponto-digital-1.onrender.com/registros/ultimo/${pin}`);
+      const ultimoRegistro = await res.json();
+      const tipo = !ultimoRegistro || ultimoRegistro.tipo === 'saida' ? 'entrada' : 'saida';
 
       await fetch('https://backend-ponto-digital-1.onrender.com/registros', {
         method: 'POST',
@@ -93,21 +92,21 @@ export default function PinPage() {
           nome: funcionario.nome,
           data,
           horario,
-          tipo: tipoRegistro
+          tipo
         })
       });
 
       setFotoFuncionario(funcionario.foto || '');
-      setMensagem(tipoRegistro === 'entrada'
+      setMensagem(tipo === 'entrada'
         ? `Bom trabalho, ${funcionario.nome}!`
         : `Até logo, ${funcionario.nome}!`
       );
       setPin('');
-    } catch (err) {
-      console.error('Erro ao registrar ponto:', err);
+    } catch (error) {
+      console.error('Erro ao registrar ponto:', error);
       setMensagem('Erro ao registrar ponto!');
     } finally {
-      setTimeout(() => setBloqueado(false), 2000); // libera após 2s
+      setTimeout(() => setBloqueado(false), 2000);
     }
   };
 
@@ -119,7 +118,7 @@ export default function PinPage() {
     } else if (valor === 'OK') {
       if (pin) registrarPonto();
     } else {
-      if (pin.length < 6) setPin(pin + valor);
+      if (pin.length < 6) setPin(prev => prev + valor);
     }
   };
 
@@ -152,9 +151,9 @@ export default function PinPage() {
       )}
 
       <div className="grid grid-cols-3 gap-4 max-w-[300px] sm:max-w-[360px] md:max-w-[400px]">
-        {teclas.map((tecla, i) => (
+        {teclas.map((tecla, index) => (
           <button
-            key={i}
+            key={index}
             onClick={() => handleTecla(tecla)}
             disabled={bloqueado && tecla === 'OK'}
             className={`w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 
