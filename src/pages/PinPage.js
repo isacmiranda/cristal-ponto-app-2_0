@@ -38,7 +38,7 @@ export default function PinPage() {
 
     const buscarFuncionarios = async () => {
       try {
-        const res = await fetch('https://backend-ponto-digital-1.onrender.com/funcionarios');
+        const res = await fetch('https://backend-ponto-digital-1.onrender.com/api/funcionarios');
         const data = await res.json();
         setFuncionarios(data);
       } catch (error) {
@@ -80,16 +80,18 @@ export default function PinPage() {
     const horario = agora.toLocaleTimeString('pt-BR');
 
     try {
-      const res = await fetch(`https://backend-ponto-digital-1.onrender.com/registros/ultimo/${pin}`);
+      const res = await fetch(`https://backend-ponto-digital-1.onrender.com/api/registros/ultimo/${pin}`);
       const ultimoRegistro = await res.json();
-      const tipo = !ultimoRegistro || ultimoRegistro.tipo === 'saida' ? 'entrada' : 'saida';
+      const tipo = !ultimoRegistro || !ultimoRegistro.tipo || ultimoRegistro.tipo === 'saida'
+        ? 'entrada'
+        : 'saida';
 
-      await fetch('https://backend-ponto-digital-1.onrender.com/registros', {
+      await fetch('https://backend-ponto-digital-1.onrender.com/api/registros', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           pin,
-          nome: funcionario.nome,
+          nome: funcionario.nome || '',
           data,
           horario,
           tipo
@@ -98,13 +100,11 @@ export default function PinPage() {
 
       setFotoFuncionario(funcionario.foto || '');
       setMensagem(tipo === 'entrada'
-        ? `Bom trabalho, ${funcionario.nome}!`
-        : `Até logo, ${funcionario.nome}!`
+        ? `Bom trabalho, ${funcionario.nome || 'funcionário'}!`
+        : `Até logo, ${funcionario.nome || 'funcionário'}!`
       );
-      
-      // Chama a função para falar o tipo de registro
-      falarTexto(tipo);
 
+      falarTexto(tipo);
       setPin('');
     } catch (error) {
       console.error('Erro ao registrar ponto:', error);
@@ -115,20 +115,18 @@ export default function PinPage() {
   };
 
   const falarTexto = (tipo) => {
-    const synth = window.speechSynthesis;
-    if (!synth) return;
+    if (!('speechSynthesis' in window)) return;
 
-    let texto;
-    if (tipo === 'entrada') {
-      texto = "Entrada registrada";
-    } else if (tipo === 'saida') {
-      texto = "Saída registrada";
-    }
-
+    const texto = tipo === 'entrada' ? "Entrada registrada" : "Saída registrada";
     const utter = new SpeechSynthesisUtterance(texto);
     utter.lang = 'pt-BR';
     utter.rate = 1;
-    synth.speak(utter);
+
+    try {
+      window.speechSynthesis.speak(utter);
+    } catch (e) {
+      console.warn('Erro ao usar síntese de fala:', e);
+    }
   };
 
   const handleTecla = (valor) => {

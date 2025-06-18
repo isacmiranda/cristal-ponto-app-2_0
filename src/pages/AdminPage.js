@@ -43,14 +43,14 @@ function AdminPage() {
   const filtrarRegistros = () => {
     const filtrados = registros.filter(r => {
       const nomeFunc = funcionarios.find(f => f.pin === r.pin)?.nome || '';
-      const dt = new Date(r.horario);
+      const dt = r.horario ? new Date(r.horario) : null;
       const ini = dataInicio ? new Date(dataInicio) : null;
       const fim = dataFim ? new Date(dataFim) : null;
       const termo = filtroNome.toLowerCase();
       return (
         (!termo || nomeFunc.toLowerCase().includes(termo) || r.pin.includes(termo)) &&
-        (!ini || dt >= ini) &&
-        (!fim || dt <= fim)
+        (!ini || (dt && dt >= ini)) &&
+        (!fim || (dt && dt <= fim))
       );
     });
     return filtrados.sort((a, b) => new Date(b.horario) - new Date(a.horario));
@@ -73,6 +73,7 @@ function AdminPage() {
   const editarRegistro = async (id, campo, valor) => {
     try {
       const atual = registros.find(r => r._id === id);
+      if (!atual) return;
       const atualizado = { ...atual, [campo]: valor };
       await axios.put(`${API_BASE}/api/registros/${id}`, atualizado);
       buscarRegistros();
@@ -108,6 +109,9 @@ function AdminPage() {
   };
 
   const imprimir = () => {
+    const tabela = document.querySelector('.tabela-registros');
+    if (!tabela) return;
+
     const css = `
       <style>
         h1 { text-align: center; }
@@ -120,7 +124,7 @@ function AdminPage() {
         <head><title>Folha de ponto - Cristal Acquacenter</title>${css}</head>
         <body>
           <h1>Folha de ponto - Cristal Acquacenter</h1>
-          ${document.querySelector('.tabela-registros').outerHTML}
+          ${tabela.outerHTML}
         </body>
       </html>
     `;
@@ -214,10 +218,14 @@ function AdminPage() {
                     <tr key={r._id} className="border-b">
                       <td className="p-2">{nomeFunc}</td>
                       <td className="p-2">{r.pin}</td>
-                      <td className="p-2"> 
+                      <td className="p-2">
                         <input
                           type="datetime-local"
-                          value={format(new Date(r.horario), "yyyy-MM-dd'T'HH:mm")}
+                          value={
+                            r.horario
+                              ? format(new Date(r.horario), "yyyy-MM-dd'T'HH:mm")
+                              : ''
+                          }
                           onChange={e => editarRegistro(r._id, 'horario', e.target.value)}
                           className="border p-1 rounded"
                         />
