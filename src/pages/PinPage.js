@@ -101,6 +101,10 @@ export default function PinPage() {
         ? `Bom trabalho, ${funcionario.nome}!`
         : `Até logo, ${funcionario.nome}!`
       );
+      
+      // Chama a função para falar o tipo de registro
+      falarTexto(tipo);
+
       setPin('');
     } catch (error) {
       console.error('Erro ao registrar ponto:', error);
@@ -108,6 +112,23 @@ export default function PinPage() {
     } finally {
       setTimeout(() => setBloqueado(false), 2000);
     }
+  };
+
+  const falarTexto = (tipo) => {
+    const synth = window.speechSynthesis;
+    if (!synth) return;
+
+    let texto;
+    if (tipo === 'entrada') {
+      texto = "Entrada registrada";
+    } else if (tipo === 'saida') {
+      texto = "Saída registrada";
+    }
+
+    const utter = new SpeechSynthesisUtterance(texto);
+    utter.lang = 'pt-BR';
+    utter.rate = 1;
+    synth.speak(utter);
   };
 
   const handleTecla = (valor) => {
