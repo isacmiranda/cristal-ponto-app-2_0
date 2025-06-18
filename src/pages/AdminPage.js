@@ -52,11 +52,16 @@ function AdminPage() {
     const nome = prompt('Nome do funcionário:');
     const pin = prompt('PIN do funcionário:');
     if (nome && pin) {
-      const formData = new FormData();
-      formData.append('nome', nome);
-      formData.append('pin', pin);
-      await axios.post(`${API_BASE}/funcionarios`, formData);
-      buscarFuncionarios();
+      try {
+        const response = await axios.post(`${API_BASE}/funcionarios`, {
+          nome,
+          pin
+        });
+        console.log('Funcionário adicionado:', response.data);
+        buscarFuncionarios();
+      } catch (error) {
+        console.error('Erro ao adicionar funcionário:', error.response ? error.response.data : error);
+      }
     }
   };
 
@@ -64,17 +69,26 @@ function AdminPage() {
     const novoNome = prompt('Novo nome:', funcionario.nome);
     const novoPin = prompt('Novo PIN:', funcionario.pin);
     if (novoNome && novoPin) {
-      const formData = new FormData();
-      formData.append('nome', novoNome);
-      formData.append('pin', novoPin);
-      await axios.put(`${API_BASE}/funcionarios/${funcionario._id}`, formData);
-      buscarFuncionarios();
+      try {
+        const response = await axios.put(`${API_BASE}/funcionarios/${funcionario._id}`, {
+          nome: novoNome,
+          pin: novoPin
+        });
+        console.log('Funcionário editado:', response.data);
+        buscarFuncionarios();
+      } catch (error) {
+        console.error('Erro ao editar funcionário:', error.response ? error.response.data : error);
+      }
     }
   };
 
   const excluirFuncionario = async (id) => {
-    await axios.delete(`${API_BASE}/funcionarios/${id}`);
-    buscarFuncionarios();
+    try {
+      await axios.delete(`${API_BASE}/funcionarios/${id}`);
+      buscarFuncionarios();
+    } catch (error) {
+      console.error('Erro ao excluir funcionário:', error);
+    }
   };
 
   const editarRegistro = (registro) => {
