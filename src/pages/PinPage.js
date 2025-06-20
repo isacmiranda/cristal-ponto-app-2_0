@@ -81,7 +81,11 @@ export default function PinPage() {
 
     try {
       const res = await fetch(`https://backend-ponto-digital-1.onrender.com/api/registros/ultimo/${pin}`);
+      
+      if (!res.ok) throw new Error('Registro não encontrado');
+
       const ultimoRegistro = await res.json();
+
       const tipo = !ultimoRegistro || !ultimoRegistro.tipo || ultimoRegistro.tipo === 'saida'
         ? 'entrada'
         : 'saida';
@@ -178,8 +182,8 @@ export default function PinPage() {
             className={`w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 
               rounded-full font-bold text-xl sm:text-2xl shadow flex items-center justify-center
               ${tecla === 'OK' ? 'bg-green-600 text-white hover:bg-green-500' :
-                tecla === 'C' ? 'bg-red-600 text-white hover:bg-red-500' :
-                'bg-white text-blue-900 hover:bg-blue-100'}
+              tecla === 'C' ? 'bg-red-600 text-white hover:bg-red-500' :
+              'bg-white text-blue-900 hover:bg-blue-100'}
               ${bloqueado && tecla === 'OK' ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             {tecla}
