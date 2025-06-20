@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 
 export default function PinPage() {
   const [pin, setPin] = useState('');
@@ -7,9 +8,9 @@ export default function PinPage() {
   const [horaAtual, setHoraAtual] = useState('');
   const [temperatura, setTemperatura] = useState(null);
   const [iconeClima, setIconeClima] = useState('');
-  const [fotoFuncionario, setFotoFuncionario] = useState('');
   const [funcionarios, setFuncionarios] = useState([]);
   const [bloqueado, setBloqueado] = useState(false);
+
   const navigate = useNavigate();
 
   const weatherIcons = useMemo(() => ({
@@ -20,44 +21,42 @@ export default function PinPage() {
   }), []);
 
   useEffect(() => {
-    const atualizarHora = () => {
-      setHoraAtual(new Date().toLocaleTimeString('pt-BR'));
-    };
+    const atualizarHora = () => setHoraAtual(new Date().toLocaleTimeString('pt-BR'));
 
     const buscarPrevisaoTempo = async () => {
       try {
-        const res = await fetch('https://api.open-meteo.com/v1/forecast?latitude=-23.55&longitude=-46.63&current_weather=true');
-        const data = await res.json();
-        const { temperature, weathercode } = data.current_weather;
+        const res = await axios.get('https://api.open-meteo.com/v1/forecast', {
+          params: { latitude: -23.55, longitude: -46.63, current_weather: true }
+        });
+        const { temperature, weathercode } = res.data.current_weather;
         setTemperatura(temperature);
         setIconeClima(weatherIcons[weathercode] || '🌡️');
-      } catch (error) {
-        console.error('Erro ao buscar previsão do tempo:', error);
+      } catch (err) {
+        console.error('Erro ao buscar clima:', err);
       }
     };
 
     const buscarFuncionarios = async () => {
       try {
-        const res = await fetch('https://backend-ponto-digital-1.onrender.com/api/funcionarios');
-        const data = await res.json();
-        setFuncionarios(data);
-      } catch (error) {
-        console.error('Erro ao buscar funcionários:', error);
+        const res = await axios.get('https://backend-ponto-digital-1.onrender.com/api/funcionarios');
+        setFuncionarios(res.data);
+      } catch (err) {
+        console.error('Erro ao buscar funcionários:', err);
       }
     };
 
     atualizarHora();
-    const intervalo = setInterval(atualizarHora, 1000);
+    const id = setInterval(atualizarHora, 1000);
     buscarPrevisaoTempo();
     buscarFuncionarios();
 
-    return () => clearInterval(intervalo);
+    return () => clearInterval(id);
   }, [weatherIcons]);
 
   useEffect(() => {
     if (mensagem) {
-      const timer = setTimeout(() => setMensagem(''), 5000);
-      return () => clearTimeout(timer);
+      const t = setTimeout(() => setMensagem(''), 5000);
+      return () => clearTimeout(t);
     }
   }, [mensagem]);
 
@@ -65,11 +64,10 @@ export default function PinPage() {
     if (!pin || bloqueado) return;
 
     setBloqueado(true);
-    const funcionario = funcionarios.find(f => f.pin === pin);
+    const func = funcionarios.find(f => f.pin === pin);
 
-    if (!funcionario) {
+    if (!func) {
       setMensagem('PIN inválido!');
-      setFotoFuncionario('');
       setPin('');
       setBloqueado(false);
       return;
@@ -80,38 +78,28 @@ export default function PinPage() {
     const horario = agora.toLocaleTimeString('pt-BR');
 
     try {
-      const res = await fetch(`https://backend-ponto-digital-1.onrender.com/api/registros/ultimo/${pin}`);
-      
-      if (!res.ok) throw new Error('Registro não encontrado');
+      const resLast = await axios.get(
+        `https://backend-ponto-digital-1.onrender.com/api/registros/ultimo/${pin}`
+      );
 
-      const ultimoRegistro = await res.json();
+      const ultimo = resLast.data;
+      const tipo = !ultimo || ultimo.tipo === 'saida' ? 'entrada' : 'saida';
 
-      const tipo = !ultimoRegistro || !ultimoRegistro.tipo || ultimoRegistro.tipo === 'saida'
-        ? 'entrada'
-        : 'saida';
+      await axios.post(
+        'https://backend-ponto-digital-1.onrender.com/api/registros',
+        { pin, nome: func.nome, data, horario, tipo }
+      );
 
-      await fetch('https://backend-ponto-digital-1.onrender.com/api/registros', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          pin,
-          nome: funcionario.nome || '',
-          data,
-          horario,
-          tipo
-        })
-      });
-
-      setFotoFuncionario(funcionario.foto || '');
       setMensagem(tipo === 'entrada'
-        ? `Bom trabalho, ${funcionario.nome || 'funcionário'}!`
-        : `Até logo, ${funcionario.nome || 'funcionário'}!`
+        ? `Bom trabalho, ${func.nome}!`
+        : `Até logo, ${func.nome}!`
       );
 
       falarTexto(tipo);
       setPin('');
-    } catch (error) {
-      console.error('Erro ao registrar ponto:', error);
+
+    } catch (err) {
+      console.error('Erro ao registrar ponto:', err);
       setMensagem('Erro ao registrar ponto!');
     } finally {
       setTimeout(() => setBloqueado(false), 2000);
@@ -120,42 +108,37 @@ export default function PinPage() {
 
   const falarTexto = (tipo) => {
     if (!('speechSynthesis' in window)) return;
-
-    const texto = tipo === 'entrada' ? "Entrada registrada" : "Saída registrada";
-    const utter = new SpeechSynthesisUtterance(texto);
-    utter.lang = 'pt-BR';
-    utter.rate = 1;
-
+    const texto = tipo === 'entrada' ? 'Entrada registrada' : 'Saída registrada';
+    const u = new SpeechSynthesisUtterance(texto);
+    u.lang = 'pt-BR';
+    u.rate = 1;
     try {
-      window.speechSynthesis.speak(utter);
+      speechSynthesis.speak(u);
     } catch (e) {
-      console.warn('Erro ao usar síntese de fala:', e);
+      console.warn('Erro ao sintetizar fala:', e);
     }
   };
 
-  const handleTecla = (valor) => {
-    if (valor === 'C') {
+  const handleTecla = (v) => {
+    if (v === 'C') {
       setPin('');
       setMensagem('');
-      setFotoFuncionario('');
-    } else if (valor === 'OK') {
-      if (pin) registrarPonto();
-    } else {
-      if (pin.length < 6) setPin(prev => prev + valor);
+    } else if (v === 'OK') {
+      registrarPonto();
+    } else if (pin.length < 6) {
+      setPin(p => p + v);
     }
   };
 
-  const teclas = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'C', '0', 'OK'];
+  const teclas = ['1','2','3','4','5','6','7','8','9','C','0','OK'];
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-900 to-blue-500 text-white flex flex-col items-center justify-center px-4 py-6">
       <div className="text-center mb-6">
         <h1 className="text-2xl md:text-3xl font-bold mb-1">Sistema de Ponto Cristal Acquacenter</h1>
-        <p className="text-lg md:text-xl flex items-center justify-center gap-4">
+        <p className="text-lg md:text-xl flex items-center gap-4 justify-center">
           🕒 {horaAtual}
-          {temperatura !== null && (
-            <span>{iconeClima} {temperatura}°C</span>
-          )}
+          {temperatura !== null && <span>{iconeClima} {temperatura}°C</span>}
         </p>
       </div>
 
@@ -163,36 +146,23 @@ export default function PinPage() {
         {pin.replace(/./g, '●')}
       </div>
 
-      {fotoFuncionario && (
-        <div className="mb-6 flex justify-center items-center">
-          <img
-            src={fotoFuncionario}
-            alt="Foto do funcionário"
-            className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-lg"
-          />
-        </div>
-      )}
-
-      <div className="grid grid-cols-3 gap-4 max-w-[300px] sm:max-w-[360px] md:max-w-[400px]">
-        {teclas.map((tecla, index) => (
+      <div className="grid grid-cols-3 gap-4 max-w-[400px]">
+        {teclas.map(t => (
           <button
-            key={index}
-            onClick={() => handleTecla(tecla)}
-            disabled={bloqueado && tecla === 'OK'}
-            className={`w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 
-              rounded-full font-bold text-xl sm:text-2xl shadow flex items-center justify-center
-              ${tecla === 'OK' ? 'bg-green-600 text-white hover:bg-green-500' :
-              tecla === 'C' ? 'bg-red-600 text-white hover:bg-red-500' :
-              'bg-white text-blue-900 hover:bg-blue-100'}
-              ${bloqueado && tecla === 'OK' ? 'opacity-50 cursor-not-allowed' : ''}`}
+            key={t}
+            onClick={() => handleTecla(t)}
+            disabled={bloqueado && t === 'OK'}
+            className={`w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 rounded-full font-bold text-xl shadow flex items-center justify-center
+              ${t === 'OK' ? 'bg-green-600' : t === 'C' ? 'bg-red-600' : 'bg-white text-blue-900'}
+              ${bloqueado && t==='OK' ? 'opacity-50 cursor-not-allowed' : 'hover:brightness-105'}`}
           >
-            {tecla}
+            {t}
           </button>
         ))}
       </div>
 
       {mensagem && (
-        <div className="mt-6 bg-white/20 text-white px-6 py-3 rounded-xl text-lg text-center max-w-xs sm:max-w-md">
+        <div className="mt-6 bg-white/20 px-6 py-3 rounded-xl text-lg text-center max-w-xs sm:max-w-md">
           {mensagem}
         </div>
       )}
