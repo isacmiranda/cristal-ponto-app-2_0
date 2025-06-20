@@ -1,59 +1,41 @@
-import React, { useState, useEffect } from 'react';
-import { format } from 'date-fns';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
-const API_BASE = 'https://backend-ponto-digital-1.onrender.com';
-
-function AdminPage() {
+const AdminPage = () => {
   const [registros, setRegistros] = useState([]);
   const [funcionarios, setFuncionarios] = useState([]);
   const [filtroNome, setFiltroNome] = useState('');
   const [dataInicio, setDataInicio] = useState('');
   const [dataFim, setDataFim] = useState('');
-  const [novoFuncionario, setNovoFuncionario] = useState({ nome: '', pin: '' });
+  const [novoFuncionario, setNovoFuncionario] = useState({ nome: '', pin: '', foto: '' });
   const [carregando, setCarregando] = useState(false);
+
   const navigate = useNavigate();
 
   useEffect(() => {
-    buscarFuncionarios();
     buscarRegistros();
+    buscarFuncionarios();
   }, []);
+
+  const buscarRegistros = async () => {
+    try {
+      const response = await axios.get('https://backend-ponto-digital-1.onrender.com/api/registros');
+      setRegistros(response.data);
+    } catch (error) {
+      alert('Erro ao buscar registros');
+      console.error(error);
+    }
+  };
 
   const buscarFuncionarios = async () => {
     try {
-      const res = await axios.get(`${API_BASE}/api/funcionarios`);
-      setFuncionarios(res.data);
-    } catch (err) {
-      console.error('Erro ao buscar funcionários:', err);
+      const response = await axios.get('https://backend-ponto-digital-1.onrender.com/api/funcionarios');
+      setFuncionarios(response.data);
+    } catch (error) {
+      alert('Erro ao buscar funcionários');
+      console.error(error);
     }
-  };
-
-  const buscarRegistros = async () => {
-    setCarregando(true);
-    try {
-      const res = await axios.get(`${API_BASE}/api/registros`);
-      setRegistros(res.data);
-    } catch (err) {
-      console.error('Erro ao buscar registros:', err);
-    }
-    setCarregando(false);
-  };
-
-  const filtrarRegistros = () => {
-    const filtrados = registros.filter(r => {
-      const nomeFunc = funcionarios.find(f => f.pin === r.pin)?.nome || '';
-      const dt = r.horario ? new Date(r.horario) : null;
-      const ini = dataInicio ? new Date(dataInicio) : null;
-      const fim = dataFim ? new Date(dataFim) : null;
-      const termo = filtroNome.toLowerCase();
-      return (
-        (!termo || nomeFunc.toLowerCase().includes(termo) || r.pin.includes(termo)) &&
-        (!ini || (dt && dt >= ini)) &&
-        (!fim || (dt && dt <= fim))
-      );
-    });
-    return filtrados.sort((a, b) => new Date(b.horario) - new Date(a.horario));
   };
 
   const adicionarFuncionario = async () => {
@@ -61,229 +43,171 @@ function AdminPage() {
       alert('Preencha todos os campos.');
       return;
     }
+    if (funcionarios.some(f => f.pin === novoFuncionario.pin)) {
+      alert('Já existe um funcionário com esse PIN.');
+      return;
+    }
     try {
-      await axios.post(`${API_BASE}/api/funcionarios`, novoFuncionario);
-      setNovoFuncionario({ nome: '', pin: '' });
+      setCarregando(true);
+      await axios.post('https://backend-ponto-digital-1.onrender.com/api/funcionarios', novoFuncionario);
+      setNovoFuncionario({ nome: '', pin: '', foto: '' });
       buscarFuncionarios();
-    } catch (err) {
-      console.error('Erro ao adicionar funcionário:', err);
+      alert('Funcionário adicionado com sucesso!');
+    } catch (error) {
+      alert('Erro ao adicionar funcionário');
+      console.error(error);
+    } finally {
+      setCarregando(false);
     }
   };
 
   const editarRegistro = async (id, campo, valor) => {
     try {
-      const atual = registros.find(r => r._id === id);
-      if (!atual) return;
-      const atualizado = { ...atual, [campo]: valor };
-      await axios.put(`${API_BASE}/api/registros/${id}`, atualizado);
+      setCarregando(true);
+      await axios.put(`https://backend-ponto-digital-1.onrender.com/api/registros/${id}`, {
+        [campo]: valor
+      });
       buscarRegistros();
-    } catch (err) {
-      console.error('Erro ao editar registro:', err);
+    } catch (error) {
+      alert('Erro ao editar registro');
+      console.error(error);
+    } finally {
+      setCarregando(false);
     }
   };
 
-  const excluirRegistro = async id => {
-    if (!window.confirm('Deseja realmente excluir este registro?')) return;
+  const excluirRegistro = async (id) => {
+    if (!window.confirm('Tem certeza que deseja excluir este registro?')) return;
     try {
-      await axios.delete(`${API_BASE}/api/registros/${id}`);
+      setCarregando(true);
+      await axios.delete(`https://backend-ponto-digital-1.onrender.com/api/registros/${id}`);
       buscarRegistros();
-    } catch (err) {
-      console.error('Erro ao excluir registro:', err);
+    } catch (error) {
+      alert('Erro ao excluir registro');
+      console.error(error);
+    } finally {
+      setCarregando(false);
     }
   };
 
-  const excluirFuncionario = async id => {
-    if (!window.confirm('Deseja realmente remover este funcionário?')) return;
+  const excluirFuncionario = async (id) => {
+    if (!window.confirm('Excluir funcionário também excluirá seus registros. Continuar?')) return;
     try {
-      await axios.delete(`${API_BASE}/api/funcionarios/${id}`);
+      setCarregando(true);
+      await axios.delete(`https://backend-ponto-digital-1.onrender.com/api/funcionarios/${id}`);
       buscarFuncionarios();
-    } catch (err) {
-      console.error('Erro ao excluir funcionário:', err);
+      buscarRegistros();
+    } catch (error) {
+      alert('Erro ao excluir funcionário');
+      console.error(error);
+    } finally {
+      setCarregando(false);
     }
   };
 
-  const limparFiltros = () => {
-    setFiltroNome('');
-    setDataInicio('');
-    setDataFim('');
-  };
+  const registrosFiltrados = useMemo(() => {
+    return registros
+      .filter((registro) => {
+        const funcionario = funcionarios.find(f => f.pin === registro.pin);
+        const nome = funcionario ? funcionario.nome.toLowerCase() : '';
+        const pin = funcionario ? funcionario.pin : '';
+        const termo = filtroNome.toLowerCase();
+        return nome.includes(termo) || pin.includes(termo);
+      })
+      .filter((registro) => {
+        const dataRegistro = new Date(registro.timestamp);
+        const inicio = dataInicio ? new Date(dataInicio) : null;
+        const fim = dataFim ? new Date(dataFim) : null;
+        return (!inicio || dataRegistro >= inicio) && (!fim || dataRegistro <= fim);
+      })
+      .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+  }, [registros, funcionarios, filtroNome, dataInicio, dataFim]);
 
-  const imprimir = () => {
-    const tabela = document.querySelector('.tabela-registros');
-    if (!tabela) return;
-
-    const css = `
-      <style>
-        h1 { text-align: center; }
-        table { width: 100%; border-collapse: collapse; margin-top: 16px; }
-        th, td { border: 1px solid #444; padding: 8px; text-align: left; }
-      </style>
-    `;
-    const html = `
-      <html>
-        <head><title>Folha de ponto - Cristal Acquacenter</title>${css}</head>
-        <body>
-          <h1>Folha de ponto - Cristal Acquacenter</h1>
-          ${tabela.outerHTML}
-        </body>
-      </html>
-    `;
-    const win = window.open('', '_blank');
-    win.document.write(html);
-    win.document.close();
-    win.focus();
-    win.print();
+  const formatarHoraParaInput = (timestamp) => {
+    const date = new Date(timestamp);
+    return date.toISOString().slice(11, 16);
   };
 
   return (
-    <div className="p-4">
-      <h1 className="text-2xl font-bold text-center mb-4">Painel Administrativo</h1>
+    <div className="p-6">
+      <h2 className="text-2xl font-bold text-center mb-4">Área Administrativa</h2>
 
-      <div className="mb-4 border p-3 rounded bg-white shadow">
-        <h2 className="text-xl font-semibold mb-2">Novo Funcionário</h2>
-        <div className="grid grid-cols-2 gap-4">
-          <input
-            className="border p-2 rounded"
-            placeholder="Nome"
-            value={novoFuncionario.nome}
-            onChange={e => setNovoFuncionario({ ...novoFuncionario, nome: e.target.value })}
-          />
-          <input
-            className="border p-2 rounded"
-            placeholder="PIN"
-            value={novoFuncionario.pin}
-            onChange={e => setNovoFuncionario({ ...novoFuncionario, pin: e.target.value })}
-          />
+      <div className="mb-6 border rounded p-4">
+        <h3 className="text-lg font-semibold mb-2">Adicionar Funcionário</h3>
+        <div className="flex flex-col md:flex-row gap-2">
+          <input type="text" placeholder="Nome" value={novoFuncionario.nome} onChange={(e) => setNovoFuncionario({ ...novoFuncionario, nome: e.target.value })} className="border p-2 rounded w-full md:w-1/3" />
+          <input type="text" placeholder="PIN" value={novoFuncionario.pin} onChange={(e) => setNovoFuncionario({ ...novoFuncionario, pin: e.target.value })} className="border p-2 rounded w-full md:w-1/3" />
+          <input type="text" placeholder="URL da Foto" value={novoFuncionario.foto} onChange={(e) => setNovoFuncionario({ ...novoFuncionario, foto: e.target.value })} className="border p-2 rounded w-full md:w-1/3" />
+          <button onClick={adicionarFuncionario} className="bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-50" disabled={carregando}>Adicionar</button>
         </div>
-        <button
-          className="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-          onClick={adicionarFuncionario}
-        >
-          Adicionar Funcionário
-        </button>
       </div>
 
-      <div className="flex flex-wrap items-end gap-2 mb-4">
-        <input
-          type="text"
-          placeholder="Filtrar por nome ou PIN"
-          value={filtroNome}
-          onChange={e => setFiltroNome(e.target.value)}
-          className="border p-2 rounded"
-        />
-        <input
-          type="date"
-          value={dataInicio}
-          onChange={e => setDataInicio(e.target.value)}
-          className="border p-2 rounded"
-        />
-        <input
-          type="date"
-          value={dataFim}
-          onChange={e => setDataFim(e.target.value)}
-          className="border p-2 rounded"
-        />
-        <button className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700" onClick={buscarRegistros}>
-          Buscar
-        </button>
-        <button className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400" onClick={limparFiltros}>
-          Limpar
-        </button>
-        <button className="ml-auto px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700" onClick={imprimir}>
-          Imprimir
-        </button>
+      <div className="flex flex-col md:flex-row gap-2 mb-4">
+        <input type="text" placeholder="Filtrar por nome ou PIN" value={filtroNome} onChange={(e) => setFiltroNome(e.target.value)} className="border p-2 rounded w-full md:w-1/3" />
+        <input type="date" value={dataInicio} onChange={(e) => setDataInicio(e.target.value)} className="border p-2 rounded" />
+        <input type="date" value={dataFim} onChange={(e) => setDataFim(e.target.value)} className="border p-2 rounded" />
+        <button onClick={() => { setFiltroNome(''); setDataInicio(''); setDataFim(''); }} className="bg-gray-400 text-white px-4 py-2 rounded">Limpar</button>
+        <button onClick={() => window.print()} className="bg-green-600 text-white px-4 py-2 rounded">Imprimir</button>
       </div>
 
-      {carregando ? (
-        <p className="text-center text-gray-600">Carregando registros...</p>
-      ) : (
-        <>
-          <p className="mb-2 text-sm text-gray-600">{filtrarRegistros().length} registro(s) encontrado(s)</p>
-
-          <div className="overflow-x-auto bg-white p-4 rounded shadow tabela-registros">
-            <table className="min-w-full">
-              <thead>
-                <tr className="bg-gray-200 text-left">
-                  <th className="p-2">Nome</th>
-                  <th className="p-2">PIN</th>
-                  <th className="p-2">Data/Hora</th>
-                  <th className="p-2">Tipo</th>
-                  <th className="p-2">Ações</th>
+      <div className="overflow-auto max-h-[500px]">
+        <table className="min-w-full bg-white border">
+          <thead>
+            <tr className="bg-gray-200">
+              <th className="border p-2">Nome</th>
+              <th className="border p-2">PIN</th>
+              <th className="border p-2">Data</th>
+              <th className="border p-2">Hora</th>
+              <th className="border p-2">Tipo</th>
+              <th className="border p-2">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            {registrosFiltrados.map((registro) => {
+              const funcionario = funcionarios.find(f => f.pin === registro.pin);
+              const nome = funcionario ? funcionario.nome : 'Desconhecido';
+              const dataHora = new Date(registro.timestamp);
+              const data = dataHora.toLocaleDateString();
+              const horaInput = formatarHoraParaInput(registro.timestamp);
+              return (
+                <tr key={registro._id}>
+                  <td className="border p-2">{nome}</td>
+                  <td className="border p-2">{registro.pin}</td>
+                  <td className="border p-2">{data}</td>
+                  <td className="border p-2">
+                    <input type="time" value={horaInput} onChange={(e) => editarRegistro(registro._id, 'hora', e.target.value)} className="border rounded p-1 w-24" />
+                  </td>
+                  <td className="border p-2">
+                    <select value={registro.tipo} onChange={(e) => editarRegistro(registro._id, 'tipo', e.target.value)} className="border rounded p-1">
+                      <option value="entrada">Entrada</option>
+                      <option value="saida">Saída</option>
+                    </select>
+                  </td>
+                  <td className="border p-2">
+                    <button onClick={() => excluirRegistro(registro._id)} className="bg-red-600 text-white px-2 py-1 rounded">Excluir</button>
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {filtrarRegistros().map(r => {
-                  const nomeFunc = funcionarios.find(f => f.pin === r.pin)?.nome || 'Desconhecido';
-                  return (
-                    <tr key={r._id} className="border-b">
-                      <td className="p-2">{nomeFunc}</td>
-                      <td className="p-2">{r.pin}</td>
-                      <td className="p-2">
-                        <input
-                          type="datetime-local"
-                          value={
-                            r.horario
-                              ? format(new Date(r.horario), "yyyy-MM-dd'T'HH:mm")
-                              : ''
-                          }
-                          onChange={e => editarRegistro(r._id, 'horario', e.target.value)}
-                          className="border p-1 rounded"
-                        />
-                      </td>
-                      <td className="p-2">
-                        <select
-                          value={r.tipo}
-                          onChange={e => editarRegistro(r._id, 'tipo', e.target.value)}
-                          className="border p-1 rounded"
-                        >
-                          <option value="entrada">Entrada</option>
-                          <option value="saida">Saída</option>
-                        </select>
-                      </td>
-                      <td className="p-2">
-                        <button
-                          onClick={() => excluirRegistro(r._id)}
-                          className="bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700"
-                        >
-                          Excluir
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </>
-      )}
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
 
       <div className="mt-6">
-        <h2 className="text-xl font-semibold mb-2">Funcionários</h2>
-        <ul className="bg-white p-4 rounded shadow">
-          {funcionarios.map(f => (
-            <li key={f._id} className="flex items-center justify-between border-b py-2">
-              <div>
-                <strong>{f.nome}</strong> — PIN: {f.pin}
-              </div>
-              <button
-                onClick={() => excluirFuncionario(f._id)}
-                className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600"
-              >
-                Remover
-              </button>
+        <h3 className="text-lg font-semibold mb-2">Funcionários</h3>
+        <ul className="space-y-2">
+          {funcionarios.map((f) => (
+            <li key={f._id} className="flex justify-between items-center border p-2 rounded">
+              <span>{f.nome} (PIN: {f.pin})</span>
+              <button onClick={() => excluirFuncionario(f._id)} className="bg-red-500 text-white px-2 py-1 rounded">Remover</button>
             </li>
           ))}
         </ul>
       </div>
 
-      <button
-        onClick={() => navigate('/')}
-        className="mt-6 px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
-      >
-        Voltar
-      </button>
+      <button onClick={() => navigate('/')} className="fixed bottom-4 right-4 bg-gray-700 text-white px-4 py-2 rounded shadow-lg">Voltar</button>
     </div>
   );
-}
+};
 
 export default AdminPage;
