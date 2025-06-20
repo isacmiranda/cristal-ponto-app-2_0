@@ -8,7 +8,7 @@ const AdminPage = () => {
   const [filtroNome, setFiltroNome] = useState('');
   const [dataInicio, setDataInicio] = useState('');
   const [dataFim, setDataFim] = useState('');
-  const [novoFuncionario, setNovoFuncionario] = useState({ nome: '', pin: '', foto: '' });
+  const [novoFuncionario, setNovoFuncionario] = useState({ nome: '', pin: '' });
   const [carregando, setCarregando] = useState(false);
 
   const navigate = useNavigate();
@@ -50,7 +50,7 @@ const AdminPage = () => {
     try {
       setCarregando(true);
       await axios.post('https://backend-ponto-digital-1.onrender.com/api/funcionarios', novoFuncionario);
-      setNovoFuncionario({ nome: '', pin: '', foto: '' });
+      setNovoFuncionario({ nome: '', pin: '' });
       buscarFuncionarios();
       alert('Funcionário adicionado com sucesso!');
     } catch (error) {
@@ -64,9 +64,20 @@ const AdminPage = () => {
   const editarRegistro = async (id, campo, valor) => {
     try {
       setCarregando(true);
-      await axios.put(`https://backend-ponto-digital-1.onrender.com/api/registros/${id}`, {
-        [campo]: valor
-      });
+      if (campo === 'hora') {
+        const registro = registros.find(r => r._id === id);
+        if (!registro) return;
+        const timestampOriginal = new Date(registro.timestamp);
+        const [hora, minuto] = valor.split(':');
+        timestampOriginal.setHours(parseInt(hora), parseInt(minuto), 0, 0);
+        await axios.put(`https://backend-ponto-digital-1.onrender.com/api/registros/${id}`, {
+          timestamp: timestampOriginal.toISOString()
+        });
+      } else {
+        await axios.put(`https://backend-ponto-digital-1.onrender.com/api/registros/${id}`, {
+          [campo]: valor
+        });
+      }
       buscarRegistros();
     } catch (error) {
       alert('Erro ao editar registro');
@@ -125,7 +136,9 @@ const AdminPage = () => {
 
   const formatarHoraParaInput = (timestamp) => {
     const date = new Date(timestamp);
-    return date.toISOString().slice(11, 16);
+    const hora = String(date.getHours()).padStart(2, '0');
+    const minuto = String(date.getMinutes()).padStart(2, '0');
+    return `${hora}:${minuto}`;
   };
 
   return (
@@ -137,7 +150,6 @@ const AdminPage = () => {
         <div className="flex flex-col md:flex-row gap-2">
           <input type="text" placeholder="Nome" value={novoFuncionario.nome} onChange={(e) => setNovoFuncionario({ ...novoFuncionario, nome: e.target.value })} className="border p-2 rounded w-full md:w-1/3" />
           <input type="text" placeholder="PIN" value={novoFuncionario.pin} onChange={(e) => setNovoFuncionario({ ...novoFuncionario, pin: e.target.value })} className="border p-2 rounded w-full md:w-1/3" />
-          <input type="text" placeholder="URL da Foto" value={novoFuncionario.foto} onChange={(e) => setNovoFuncionario({ ...novoFuncionario, foto: e.target.value })} className="border p-2 rounded w-full md:w-1/3" />
           <button onClick={adicionarFuncionario} className="bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-50" disabled={carregando}>Adicionar</button>
         </div>
       </div>
