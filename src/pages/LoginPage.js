@@ -8,21 +8,21 @@ export default function LoginPage() {
   const [erro, setErro] = useState('');
   const navigate = useNavigate();
 
-  // Dados do usuário de exemplo (pode ser substituído por dados reais)
+ 
   const usuarioValido = 'admin';
   const senhaValida = 'admin123';
 
   const handleLogin = () => {
     if (usuario === usuarioValido && senha === senhaValida) {
-      localStorage.setItem('usuarioAutenticado', 'true'); // Salva a autenticação
-      navigate('/admin'); // Redireciona para a área administrativa
+      localStorage.setItem('usuarioAutenticado', 'true'); 
+      navigate('/admin'); 
     } else {
       setErro('Usuário ou senha inválidos');
     }
   };
 
   const handleVoltar = () => {
-    navigate('/'); // Redireciona de volta para o registro de ponto
+    navigate('/'); 
   };
 
   return (

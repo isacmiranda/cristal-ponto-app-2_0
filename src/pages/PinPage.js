@@ -1,6 +1,6 @@
+// ... [importações mantidas]
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
 
 export default function PinPage() {
   const [pin, setPin] = useState('');
@@ -8,8 +8,9 @@ export default function PinPage() {
   const [horaAtual, setHoraAtual] = useState('');
   const [temperatura, setTemperatura] = useState(null);
   const [iconeClima, setIconeClima] = useState('');
-  const [funcionarios, setFuncionarios] = useState([]);
   const [bloqueado, setBloqueado] = useState(false);
+  const [registros, setRegistros] = useState([]);
+  const [funcionarios, setFuncionarios] = useState([]);
 
   const navigate = useNavigate();
 
@@ -22,13 +23,11 @@ export default function PinPage() {
 
   useEffect(() => {
     const atualizarHora = () => setHoraAtual(new Date().toLocaleTimeString('pt-BR'));
-
     const buscarPrevisaoTempo = async () => {
       try {
-        const res = await axios.get('https://api.open-meteo.com/v1/forecast', {
-          params: { latitude: -23.55, longitude: -46.63, current_weather: true }
-        });
-        const { temperature, weathercode } = res.data.current_weather;
+        const res = await fetch('https://api.open-meteo.com/v1/forecast?latitude=-23.55&longitude=-46.63&current_weather=true');
+        const data = await res.json();
+        const { temperature, weathercode } = data.current_weather;
         setTemperatura(temperature);
         setIconeClima(weatherIcons[weathercode] || '🌡️');
       } catch (err) {
@@ -36,19 +35,14 @@ export default function PinPage() {
       }
     };
 
-    const buscarFuncionarios = async () => {
-      try {
-        const res = await axios.get('https://backend-ponto-digital-1.onrender.com/api/funcionarios');
-        setFuncionarios(res.data);
-      } catch (err) {
-        console.error('Erro ao buscar funcionários:', err);
-      }
-    };
-
     atualizarHora();
     const id = setInterval(atualizarHora, 1000);
     buscarPrevisaoTempo();
-    buscarFuncionarios();
+
+    const registrosSalvos = JSON.parse(localStorage.getItem('registros') || '[]');
+    const funcionariosSalvos = JSON.parse(localStorage.getItem('funcionarios') || '[]');
+    setRegistros(registrosSalvos);
+    setFuncionarios(funcionariosSalvos);
 
     return () => clearInterval(id);
   }, [weatherIcons]);
@@ -60,13 +54,13 @@ export default function PinPage() {
     }
   }, [mensagem]);
 
-  const registrarPonto = async () => {
+  const registrarPonto = () => {
     if (!pin || bloqueado) return;
 
     setBloqueado(true);
-    const func = funcionarios.find(f => f.pin === pin);
+    const funcionario = funcionarios.find(f => f.pin === pin);
 
-    if (!func) {
+    if (!funcionario) {
       setMensagem('PIN inválido!');
       setPin('');
       setBloqueado(false);
@@ -76,34 +70,35 @@ export default function PinPage() {
     const agora = new Date();
     const data = agora.toLocaleDateString('pt-BR');
     const horario = agora.toLocaleTimeString('pt-BR');
+    const tipo = obterTipoRegistro(pin);
 
-    try {
-      const resLast = await axios.get(
-        `https://backend-ponto-digital-1.onrender.com/api/registros/ultimo/${pin}`
-      );
+    const novoRegistro = {
+      pin,
+      nome: funcionario.nome,
+      data,
+      horario,
+      tipo,
+    };
 
-      const ultimo = resLast.data;
-      const tipo = !ultimo || ultimo.tipo === 'saida' ? 'entrada' : 'saida';
+    const novosRegistros = [...registros, novoRegistro];
+    setRegistros(novosRegistros);
+    localStorage.setItem('registros', JSON.stringify(novosRegistros));
 
-      await axios.post(
-        'https://backend-ponto-digital-1.onrender.com/api/registros',
-        { pin, nome: func.nome, data, horario, tipo }
-      );
+    setMensagem(tipo === 'entrada'
+      ? `Bom trabalho, ${funcionario.nome}!`
+      : `Até logo, ${funcionario.nome}!`
+    );
 
-      setMensagem(tipo === 'entrada'
-        ? `Bom trabalho, ${func.nome}!`
-        : `Até logo, ${func.nome}!`
-      );
+    falarTexto(tipo);
+    playConfirmationSound();
+    setPin('');
+    setTimeout(() => setBloqueado(false), 2000);
+  };
 
-      falarTexto(tipo);
-      setPin('');
-
-    } catch (err) {
-      console.error('Erro ao registrar ponto:', err);
-      setMensagem('Erro ao registrar ponto!');
-    } finally {
-      setTimeout(() => setBloqueado(false), 2000);
-    }
+  const obterTipoRegistro = (pin) => {
+    const registrosDoUsuario = registros.filter(r => r.pin === pin);
+    const ultimo = registrosDoUsuario[registrosDoUsuario.length - 1];
+    return !ultimo || ultimo.tipo === 'saida' ? 'entrada' : 'saida';
   };
 
   const falarTexto = (tipo) => {
@@ -119,6 +114,11 @@ export default function PinPage() {
     }
   };
 
+  const playConfirmationSound = () => {
+    const audio = new Audio('https://cdn.pixabay.com/audio/2022/03/15/audio_6dbba87df3.mp3');
+    audio.play().catch(e => console.warn('Erro ao tocar som:', e));
+  };
+
   const handleTecla = (v) => {
     if (v === 'C') {
       setPin('');
@@ -130,7 +130,7 @@ export default function PinPage() {
     }
   };
 
-  const teclas = ['1','2','3','4','5','6','7','8','9','C','0','OK'];
+  const teclas = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'C', '0', 'OK'];
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-900 to-blue-500 text-white flex flex-col items-center justify-center px-4 py-6">
@@ -153,8 +153,7 @@ export default function PinPage() {
             onClick={() => handleTecla(t)}
             disabled={bloqueado && t === 'OK'}
             className={`w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 rounded-full font-bold text-xl shadow flex items-center justify-center
-              ${t === 'OK' ? 'bg-green-600' : t === 'C' ? 'bg-red-600' : 'bg-white text-blue-900'}
-              ${bloqueado && t==='OK' ? 'opacity-50 cursor-not-allowed' : 'hover:brightness-105'}`}
+              ${t === 'OK' ? 'bg-green-600' : t === 'C' ? 'bg-red-600' : 'bg-white text-blue-900'}`}
           >
             {t}
           </button>
@@ -162,7 +161,7 @@ export default function PinPage() {
       </div>
 
       {mensagem && (
-        <div className="mt-6 bg-white/20 px-6 py-3 rounded-xl text-lg text-center max-w-xs sm:max-w-md">
+        <div className="mt-6 bg-yellow-400 text-black px-6 py-3 rounded-xl text-lg text-center max-w-xs sm:max-w-md font-bold">
           {mensagem}
         </div>
       )}
