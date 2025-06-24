@@ -1,201 +1,219 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react'; 
 import { useNavigate } from 'react-router-dom';
 
-const AdminPage = () => {
-  const navigate = useNavigate(); // Navegação para outras páginas
-  const [funcionarios, setFuncionarios] = useState([]);
+export default function AdminPage() {
   const [registros, setRegistros] = useState([]);
+  const [todosRegistros, setTodosRegistros] = useState([]);
+  const [paginaAtual, setPaginaAtual] = useState(1);
+  const registrosPorPagina = 31;
+
+  const [filtroInicio, setFiltroInicio] = useState('');
+  const [filtroFim, setFiltroFim] = useState('');
+  const [filtroNome, setFiltroNome] = useState('');
+  const [filtroPIN, setFiltroPIN] = useState('');
+  const [funcionarios, setFuncionarios] = useState([]);
   const [novoFuncionario, setNovoFuncionario] = useState({ nome: '', pin: '' });
-  const [editandoFuncionario, setEditandoFuncionario] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    const funcionariosSalvos = JSON.parse(localStorage.getItem('funcionarios') || '[]');
-    const registrosSalvos = JSON.parse(localStorage.getItem('registros') || '[]');
-    setFuncionarios(funcionariosSalvos);
-    setRegistros(registrosSalvos);
+    const localRegistros = localStorage.getItem('registros');
+    const localFuncionarios = localStorage.getItem('funcionarios');
+    if (localRegistros) {
+      const data = JSON.parse(localRegistros);
+      setTodosRegistros(data);
+      setRegistros(data);
+    }
+    if (localFuncionarios) setFuncionarios(JSON.parse(localFuncionarios));
   }, []);
 
-  // Funções de CRUD de Funcionários
+  const handleBuscar = () => {
+    const inicio = new Date(filtroInicio);
+    const fim = new Date(filtroFim);
+    const filtrados = todosRegistros.filter(r => {
+      const data = new Date(r.data.split('/').reverse().join('-'));
+      const matchData = (!filtroInicio || data >= inicio) && (!filtroFim || data <= fim);
+      const matchNome = !filtroNome || r.nome.toLowerCase().includes(filtroNome.toLowerCase());
+      const matchPIN = !filtroPIN || r.pin.includes(filtroPIN);
+      return matchData && matchNome && matchPIN;
+    });
+    setRegistros(filtrados);
+    setPaginaAtual(1); // Reinicia na primeira página após filtro
+  };
+
+  const handleLimpar = () => {
+    setRegistros(todosRegistros);
+    setFiltroInicio('');
+    setFiltroFim('');
+    setFiltroNome('');
+    setFiltroPIN('');
+    setPaginaAtual(1);
+  };
+
   const adicionarFuncionario = () => {
-    if (!novoFuncionario.nome || !novoFuncionario.pin) {
-      alert('Por favor, preencha todos os campos');
-      return;
+    if (!novoFuncionario.nome || !novoFuncionario.pin) return;
+    const atualizados = [...funcionarios, novoFuncionario];
+    setFuncionarios(atualizados);
+    localStorage.setItem('funcionarios', JSON.stringify(atualizados));
+    setNovoFuncionario({ nome: '', pin: '' });
+  };
+
+  const editarFuncionario = (index) => {
+    const atual = funcionarios[index];
+    const nome = prompt('Editar nome:', atual.nome);
+    const pin = prompt('Editar PIN:', atual.pin);
+    if (nome && pin) {
+      const atualizados = [...funcionarios];
+      atualizados[index] = { nome, pin };
+      setFuncionarios(atualizados);
+      localStorage.setItem('funcionarios', JSON.stringify(atualizados));
     }
-    const funcionariosAtualizados = [...funcionarios, novoFuncionario];
-    setFuncionarios(funcionariosAtualizados);
-    localStorage.setItem('funcionarios', JSON.stringify(funcionariosAtualizados));
-    setNovoFuncionario({ nome: '', pin: '' });
   };
 
-  const editarFuncionario = (funcionario) => {
-    setEditandoFuncionario(funcionario);
-    setNovoFuncionario(funcionario);
+  const removerFuncionario = (index) => {
+    const atualizados = funcionarios.filter((_, i) => i !== index);
+    setFuncionarios(atualizados);
+    localStorage.setItem('funcionarios', JSON.stringify(atualizados));
   };
 
-  const salvarEdicaoFuncionario = () => {
-    const funcionariosAtualizados = funcionarios.map(f =>
-      f.pin === editandoFuncionario.pin ? novoFuncionario : f
-    );
-    setFuncionarios(funcionariosAtualizados);
-    localStorage.setItem('funcionarios', JSON.stringify(funcionariosAtualizados));
-    setNovoFuncionario({ nome: '', pin: '' });
-    setEditandoFuncionario(null);
+  const editarRegistro = (indexGlobal) => {
+    const atual = registros[indexGlobal];
+    const data = prompt('Nova data (DD/MM/AAAA):', atual.data);
+    const horario = prompt('Novo horário:', atual.horario);
+    const tipo = prompt('Novo tipo (entrada/saida):', atual.tipo);
+    if (data && horario && tipo) {
+      const atualizados = [...registros];
+      atualizados[indexGlobal] = { ...atual, data, horario, tipo };
+      setRegistros(atualizados);
+      const todosAtualizados = [...todosRegistros];
+      const indexOriginal = todosRegistros.findIndex(r => r === atual);
+      if (indexOriginal !== -1) {
+        todosAtualizados[indexOriginal] = { ...atual, data, horario, tipo };
+        setTodosRegistros(todosAtualizados);
+        localStorage.setItem('registros', JSON.stringify(todosAtualizados));
+      }
+    }
   };
 
-  const excluirFuncionario = (pin) => {
-    const funcionariosAtualizados = funcionarios.filter(f => f.pin !== pin);
-    setFuncionarios(funcionariosAtualizados);
-    localStorage.setItem('funcionarios', JSON.stringify(funcionariosAtualizados));
+  const removerRegistro = (indexGlobal) => {
+    const item = registros[indexGlobal];
+    const atualizados = registros.filter((_, i) => i !== indexGlobal);
+    const todosAtualizados = todosRegistros.filter(r => r !== item);
+    setRegistros(atualizados);
+    setTodosRegistros(todosAtualizados);
+    localStorage.setItem('registros', JSON.stringify(todosAtualizados));
   };
 
-  // Função de exclusão de Registros
-  const excluirRegistro = (id) => {
-    const registrosAtualizados = registros.filter(r => r.id !== id);
-    setRegistros(registrosAtualizados);
-    localStorage.setItem('registros', JSON.stringify(registrosAtualizados));
+  const imprimir = () => {
+    const printWindow = window.open('', '_blank');
+    const html = `
+      <html>
+        <head><title>Impressão</title></head>
+        <body>
+          <h1 style="text-align:center">Registro de Ponto Cristal Acquacenter</h1>
+          <table border="1" style="width:100%; border-collapse: collapse">
+            <thead>
+              <tr><th>Data</th><th>Horário</th><th>Nome</th><th>Tipo</th></tr>
+            </thead>
+            <tbody>
+              ${registros.map(r => `
+                <tr>
+                  <td>${r.data}</td>
+                  <td>${r.horario}</td>
+                  <td>${r.nome}</td>
+                  <td>${r.tipo}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </body>
+      </html>
+    `;
+    printWindow.document.write(html);
+    printWindow.document.close();
+    printWindow.print();
   };
 
-  const handleBack = () => {
-    navigate('/'); // Navega para a página de PIN
-  };
-
-  // Função de impressão
-  const imprimirRelatorio = () => {
-    const conteudo = document.getElementById('tabela-registros').outerHTML;
-    const janela = window.open('', '', 'height=600,width=800');
-    janela.document.write('<html><head><title>Folha de ponto - Cristal Acquacenter</title></head><body>');
-    janela.document.write('<h1 style="text-align: center;">Folha de ponto - Cristal Acquacenter</h1>');
-    janela.document.write(conteudo);
-    janela.document.write('</body></html>');
-    janela.document.close();
-    janela.print();
-  };
-
-  // Função para formatar a data de forma segura
-  const formatarData = (data) => {
-    const parsedDate = new Date(data);
-    return !isNaN(parsedDate) ? parsedDate.toLocaleDateString() : 'Data Inválida';
-  };
-
-  // Função para formatar a hora
-  const formatarHora = (hora) => {
-    if (!hora) return 'Hora Inválida';
-    const parsedHora = new Date(`1970-01-01T${hora}:00Z`); // Formato correto ISO
-    return !isNaN(parsedHora) ? parsedHora.toLocaleTimeString() : 'Hora Inválida';
-  };
+  // Paginação
+  const totalPaginas = Math.ceil(registros.length / registrosPorPagina);
+  const registrosExibidos = registros.slice((paginaAtual - 1) * registrosPorPagina, paginaAtual * registrosPorPagina);
 
   return (
-    <div className="p-6 min-h-screen bg-blue-50">
-      <h1 className="text-2xl font-bold text-center mb-4">Área Administrativa</h1>
-
-      {/* Botão de Voltar */}
-      <button
-        onClick={handleBack}
-        className="bg-blue-500 text-white px-4 py-2 rounded-md mb-4"
-      >
-        Voltar para o Ponto
-      </button>
-
-      {/* Formulário para adicionar ou editar funcionário */}
-      <div className="mb-4">
-        <h2 className="text-xl mb-2">{editandoFuncionario ? 'Editar Funcionário' : 'Adicionar Funcionário'}</h2>
-        <input
-          type="text"
-          value={novoFuncionario.nome}
-          onChange={(e) => setNovoFuncionario({ ...novoFuncionario, nome: e.target.value })}
-          placeholder="Nome"
-          className="border p-2 rounded-md w-full mb-2"
-        />
-        <input
-          type="text"
-          value={novoFuncionario.pin}
-          onChange={(e) => setNovoFuncionario({ ...novoFuncionario, pin: e.target.value })}
-          placeholder="PIN"
-          className="border p-2 rounded-md w-full mb-2"
-        />
-        <button
-          onClick={editandoFuncionario ? salvarEdicaoFuncionario : adicionarFuncionario}
-          className="bg-green-500 text-white px-4 py-2 rounded-md"
-        >
-          {editandoFuncionario ? 'Salvar Alterações' : 'Adicionar Funcionário'}
-        </button>
+    <div className="flex flex-col items-center min-h-screen bg-gradient-to-r from-blue-500 to-blue-700 text-white px-4 py-6">
+      <div className="flex justify-between w-full p-4 bg-blue-800">
+        <h1 className="text-xl font-semibold">Admin - Sistema de Ponto Cristal Acquacenter</h1>
+        <button onClick={() => navigate('/')} className="bg-gray-700 hover:bg-gray-600 p-2 rounded">🔙</button>
       </div>
 
-      {/* Lista de funcionários */}
-      <h2 className="text-xl mb-4">Funcionários Cadastrados</h2>
-      <table className="min-w-full border-collapse">
-        <thead>
-          <tr>
-            <th className="border px-4 py-2">Nome</th>
-            <th className="border px-4 py-2">PIN</th>
-            <th className="border px-4 py-2">Ações</th>
-          </tr>
-        </thead>
-        <tbody>
-          {funcionarios.map((funcionario) => (
-            <tr key={funcionario.pin}>
-              <td className="border px-4 py-2">{funcionario.nome}</td>
-              <td className="border px-4 py-2">{funcionario.pin}</td>
-              <td className="border px-4 py-2">
-                <button
-                  onClick={() => editarFuncionario(funcionario)}
-                  className="bg-yellow-500 text-white px-4 py-2 rounded-md mr-2"
-                >
-                  Editar
-                </button>
-                <button
-                  onClick={() => excluirFuncionario(funcionario.pin)}
-                  className="bg-red-500 text-white px-4 py-2 rounded-md"
-                >
-                  Excluir
-                </button>
-              </td>
-            </tr>
+      {/* Funcionario */}
+      <div className="bg-white text-black rounded-lg shadow p-4 w-full max-w-2xl mt-4">
+        <h2 className="text-lg font-bold mb-2">Gerenciar Funcionários</h2>
+        <div className="flex gap-2 mb-2 flex-wrap">
+          <input type="text" placeholder="Nome" value={novoFuncionario.nome} onChange={e => setNovoFuncionario({ ...novoFuncionario, nome: e.target.value })} className="border p-2 rounded w-full sm:w-auto" />
+          <input type="text" placeholder="PIN" value={novoFuncionario.pin} onChange={e => setNovoFuncionario({ ...novoFuncionario, pin: e.target.value })} className="border p-2 rounded w-full sm:w-auto" />
+          <button onClick={adicionarFuncionario} className="bg-blue-600 text-white px-4 py-2 rounded">Adicionar</button>
+        </div>
+        <ul className="space-y-2">
+          {funcionarios.map((f, i) => (
+            <li key={i} className="flex justify-between items-center border p-2 rounded">
+              <span>{f.nome} (PIN: {f.pin})</span>
+              <div className="space-x-2">
+                <button onClick={() => editarFuncionario(i)} className="bg-yellow-500 px-2 py-1 rounded">✏️</button>
+                <button onClick={() => removerFuncionario(i)} className="bg-red-500 px-2 py-1 rounded">🗑️</button>
+              </div>
+            </li>
           ))}
-        </tbody>
-      </table>
+        </ul>
+      </div>
 
-      {/* Botão Imprimir */}
-      <button
-        onClick={imprimirRelatorio}
-        className="bg-blue-500 text-white px-4 py-2 rounded-md mt-4"
-      >
-        Imprimir Relatório
-      </button>
+      {/* Filtros */}
+      <div className="flex flex-wrap justify-center gap-2 my-4 w-full max-w-4xl">
+        <input type="date" value={filtroInicio} onChange={e => setFiltroInicio(e.target.value)} className="p-2 rounded text-black w-full sm:w-auto" />
+        <input type="date" value={filtroFim} onChange={e => setFiltroFim(e.target.value)} className="p-2 rounded text-black w-full sm:w-auto" />
+        <input type="text" placeholder="Filtrar por nome" value={filtroNome} onChange={e => setFiltroNome(e.target.value)} className="p-2 rounded text-black w-full sm:w-auto" />
+        <input type="text" placeholder="Filtrar por PIN" value={filtroPIN} onChange={e => setFiltroPIN(e.target.value)} className="p-2 rounded text-black w-full sm:w-auto" />
+        <button onClick={handleBuscar} className="bg-green-600 px-4 py-2 rounded">Buscar</button>
+        <button onClick={handleLimpar} className="bg-gray-600 px-4 py-2 rounded">Limpar</button>
+        <button onClick={imprimir} className="bg-indigo-600 px-4 py-2 rounded">🖨️ Imprimir</button>
+      </div>
 
-      {/* Lista de registros */}
-      <h2 className="text-xl mt-6 mb-4">Registros de Ponto</h2>
-      <table id="tabela-registros" className="min-w-full border-collapse">
-        <thead>
-          <tr>
-            <th className="border px-4 py-2">Nome</th>
-            <th className="border px-4 py-2">Data</th>
-            <th className="border px-4 py-2">Hora</th>
-            <th className="border px-4 py-2">Tipo</th>
-            <th className="border px-4 py-2">Ações</th>
-          </tr>
-        </thead>
-        <tbody>
-          {registros.map((registro) => (
-            <tr key={registro.id}>
-              <td className="border px-4 py-2">{registro.nome}</td>
-              <td className="border px-4 py-2">{formatarData(registro.data)}</td>
-              <td className="border px-4 py-2">{formatarHora(registro.hora)}</td>
-              <td className="border px-4 py-2">{registro.tipo}</td>
-              <td className="border px-4 py-2">
-                <button
-                  onClick={() => excluirRegistro(registro.id)}
-                  className="bg-red-500 text-white px-4 py-2 rounded-md"
-                >
-                  Excluir
-                </button>
-              </td>
+      {/* Tabela */}
+      <div className="overflow-x-auto w-full max-w-4xl">
+        <table className="min-w-full bg-white text-black rounded shadow">
+          <thead>
+            <tr className="bg-blue-200">
+              <th className="p-2">Data</th>
+              <th className="p-2">Horário</th>
+              <th className="p-2">Nome</th>
+              <th className="p-2">Tipo</th>
+              <th className="p-2">Editar</th>
+              <th className="p-2">Excluir</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {registrosExibidos.map((r, i) => (
+              <tr key={i} className="border-b">
+                <td className="p-2">{r.data}</td>
+                <td className="p-2">{r.horario}</td>
+                <td className="p-2">{r.nome}</td>
+                <td className="p-2">{r.tipo}</td>
+                <td className="p-2">
+                  <button onClick={() => editarRegistro((paginaAtual - 1) * registrosPorPagina + i)} className="bg-yellow-400 px-2 py-1 rounded">✏️</button>
+                </td>
+                <td className="p-2">
+                  <button onClick={() => removerRegistro((paginaAtual - 1) * registrosPorPagina + i)} className="bg-red-400 px-2 py-1 rounded">🗑️</button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Paginação */}
+      <div className="flex justify-center space-x-2 my-4">
+        <button onClick={() => setPaginaAtual(paginaAtual - 1)} disabled={paginaAtual === 1} className="bg-gray-600 text-white px-4 py-2 rounded disabled:opacity-50">Anterior</button>
+        <span>{paginaAtual} de {totalPaginas}</span>
+        <button onClick={() => setPaginaAtual(paginaAtual + 1)} disabled={paginaAtual === totalPaginas} className="bg-gray-600 text-white px-4 py-2 rounded disabled:opacity-50">Próxima</button>
+      </div>
     </div>
   );
-};
-
-export default AdminPage;
+}
