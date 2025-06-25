@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'; 
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 export default function AdminPage() {
@@ -83,6 +83,10 @@ export default function AdminPage() {
     if (data && horario && tipo) {
       const atualizados = [...registros];
       atualizados[indexGlobal] = { ...atual, data, horario, tipo };
+      
+      // Reordena os registros após edição, colocando os mais recentes na frente
+      atualizados.sort((a, b) => new Date(b.data.split('/').reverse().join('-')) - new Date(a.data.split('/').reverse().join('-')));
+      
       setRegistros(atualizados);
       const todosAtualizados = [...todosRegistros];
       const indexOriginal = todosRegistros.findIndex(r => r === atual);
@@ -101,36 +105,6 @@ export default function AdminPage() {
     setRegistros(atualizados);
     setTodosRegistros(todosAtualizados);
     localStorage.setItem('registros', JSON.stringify(todosAtualizados));
-  };
-
-  const imprimir = () => {
-    const printWindow = window.open('', '_blank');
-    const html = `
-      <html>
-        <head><title>Impressão</title></head>
-        <body>
-          <h1 style="text-align:center">Registro de Ponto Cristal Acquacenter</h1>
-          <table border="1" style="width:100%; border-collapse: collapse">
-            <thead>
-              <tr><th>Data</th><th>Horário</th><th>Nome</th><th>Tipo</th></tr>
-            </thead>
-            <tbody>
-              ${registros.map(r => `
-                <tr>
-                  <td>${r.data}</td>
-                  <td>${r.horario}</td>
-                  <td>${r.nome}</td>
-                  <td>${r.tipo}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        </body>
-      </html>
-    `;
-    printWindow.document.write(html);
-    printWindow.document.close();
-    printWindow.print();
   };
 
   // Paginação
@@ -173,7 +147,6 @@ export default function AdminPage() {
         <input type="text" placeholder="Filtrar por PIN" value={filtroPIN} onChange={e => setFiltroPIN(e.target.value)} className="p-2 rounded text-black w-full sm:w-auto" />
         <button onClick={handleBuscar} className="bg-green-600 px-4 py-2 rounded">Buscar</button>
         <button onClick={handleLimpar} className="bg-gray-600 px-4 py-2 rounded">Limpar</button>
-        <button onClick={imprimir} className="bg-indigo-600 px-4 py-2 rounded">🖨️ Imprimir</button>
       </div>
 
       {/* Tabela */}
