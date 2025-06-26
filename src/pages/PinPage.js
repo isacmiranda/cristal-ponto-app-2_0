@@ -134,7 +134,16 @@ export default function PinPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-900 to-blue-500 text-white flex flex-col items-center justify-center px-4 py-6">
       <div className="text-center mb-6">
-        <h1 className="text-2xl md:text-3xl font-bold mb-1">Sistema de Ponto Cristal Acquacenter</h1>
+        <div className="flex items-center justify-center gap-4 flex-wrap mb-2">
+          <img
+            src="/logo.png" 
+            alt="Logo Cristal Acquacenter"
+            className="w-12 h-12 md:w-16 md:h-16 object-contain"
+          />
+          <h1 className="text-2xl md:text-3xl font-bold">
+            Sistema de Ponto Cristal Acquacenter
+          </h1>
+        </div>
         <p className="text-lg md:text-xl flex items-center gap-4 justify-center">
           🕒 {horaAtual}
           {temperatura !== null && <span>{iconeClima} {temperatura}°C</span>}
