@@ -30,14 +30,16 @@ export default function AdminPage() {
     const inicio = new Date(filtroInicio);
     const fim = new Date(filtroFim);
     const filtrados = todosRegistros.filter(r => {
-      const data = new Date(r.data.split('/').reverse().join('-'));
-      const matchData = (!filtroInicio || data >= inicio) && (!filtroFim || data <= fim);
-      const matchNome = !filtroNome || r.nome.toLowerCase().includes(filtroNome.toLowerCase());
-      const matchPIN = !filtroPIN || r.pin.includes(filtroPIN);
-      return matchData && matchNome && matchPIN;
+      const dataObj = new Date(r.data.split('/').reverse().join('-'));
+      return (
+        (!filtroInicio || dataObj >= inicio) &&
+        (!filtroFim || dataObj <= fim) &&
+        (!filtroNome || r.nome.toLowerCase().includes(filtroNome.toLowerCase())) &&
+        (!filtroPIN || r.pin.includes(filtroPIN))
+      );
     });
     setRegistros(filtrados);
-    setPaginaAtual(1); // Reinicia na primeira página após filtro
+    setPaginaAtual(1);
   };
 
   const handleLimpar = () => {
@@ -59,6 +61,8 @@ export default function AdminPage() {
 
   const editarFuncionario = (index) => {
     const atual = funcionarios[index];
+    const nomeAntigo = atual.nome;
+    const pinAntigo = atual.pin;
     const nome = prompt('Editar nome:', atual.nome);
     const pin = prompt('Editar PIN:', atual.pin);
     if (nome && pin) {
@@ -66,6 +70,15 @@ export default function AdminPage() {
       atualizados[index] = { nome, pin };
       setFuncionarios(atualizados);
       localStorage.setItem('funcionarios', JSON.stringify(atualizados));
+
+      const registrosAtualizados = todosRegistros.map(r => {
+        if (r.pin === pinAntigo) return { ...r, nome, pin };
+        return r;
+      });
+
+      setTodosRegistros(registrosAtualizados);
+      setRegistros(registrosAtualizados);
+      localStorage.setItem('registros', JSON.stringify(registrosAtualizados));
     }
   };
 
@@ -81,35 +94,53 @@ export default function AdminPage() {
     const horario = prompt('Novo horário:', atual.horario);
     const tipo = prompt('Novo tipo (entrada/saida):', atual.tipo);
     if (data && horario && tipo) {
-      const atualizados = [...registros];
-      atualizados[indexGlobal] = { ...atual, data, horario, tipo };
-      
-      // Reordena os registros após edição, colocando os mais recentes na frente
-      atualizados.sort((a, b) => new Date(b.data.split('/').reverse().join('-')) - new Date(a.data.split('/').reverse().join('-')));
-      
-      setRegistros(atualizados);
-      const todosAtualizados = [...todosRegistros];
-      const indexOriginal = todosRegistros.findIndex(r => r === atual);
-      if (indexOriginal !== -1) {
-        todosAtualizados[indexOriginal] = { ...atual, data, horario, tipo };
-        setTodosRegistros(todosAtualizados);
-        localStorage.setItem('registros', JSON.stringify(todosAtualizados));
+      const atualizado = { ...atual, data, horario, tipo };
+      const novosReg = [...registros];
+      novosReg[indexGlobal] = atualizado;
+      novosReg.sort((a, b) =>
+        new Date(b.data.split('/').reverse().join('-')) -
+        new Date(a.data.split('/').reverse().join('-'))
+      );
+      setRegistros(novosReg);
+
+      const idx = todosRegistros.findIndex(r =>
+        r.data === atual.data &&
+        r.horario === atual.horario &&
+        r.nome === atual.nome &&
+        r.tipo === atual.tipo
+      );
+      if (idx !== -1) {
+        const todosAtu = [...todosRegistros];
+        todosAtu[idx] = atualizado;
+        todosAtu.sort((a, b) =>
+          new Date(b.data.split('/').reverse().join('-')) -
+          new Date(a.data.split('/').reverse().join('-'))
+        );
+        setTodosRegistros(todosAtu);
+        localStorage.setItem('registros', JSON.stringify(todosAtu));
       }
     }
   };
 
   const removerRegistro = (indexGlobal) => {
-    const item = registros[indexGlobal];
-    const atualizados = registros.filter((_, i) => i !== indexGlobal);
-    const todosAtualizados = todosRegistros.filter(r => r !== item);
-    setRegistros(atualizados);
-    setTodosRegistros(todosAtualizados);
-    localStorage.setItem('registros', JSON.stringify(todosAtualizados));
+    const reg = registros[indexGlobal];
+    const novosReg = registros.filter((_, i) => i !== indexGlobal);
+    const novosTodos = todosRegistros.filter(r =>
+      !(r.data === reg.data &&
+        r.horario === reg.horario &&
+        r.nome === reg.nome &&
+        r.tipo === reg.tipo)
+    );
+    setRegistros(novosReg);
+    setTodosRegistros(novosTodos);
+    localStorage.setItem('registros', JSON.stringify(novosTodos));
   };
 
-  // Paginação
   const totalPaginas = Math.ceil(registros.length / registrosPorPagina);
-  const registrosExibidos = registros.slice((paginaAtual - 1) * registrosPorPagina, paginaAtual * registrosPorPagina);
+  const registrosExibidos = registros.slice(
+    (paginaAtual - 1) * registrosPorPagina,
+    paginaAtual * registrosPorPagina
+  );
 
   return (
     <div className="flex flex-col items-center min-h-screen bg-gradient-to-r from-blue-500 to-blue-700 text-white px-4 py-6">
@@ -118,12 +149,24 @@ export default function AdminPage() {
         <button onClick={() => navigate('/')} className="bg-gray-700 hover:bg-gray-600 p-2 rounded">🔙</button>
       </div>
 
-      {/* Funcionario */}
+      {/* Funcionários */}
       <div className="bg-white text-black rounded-lg shadow p-4 w-full max-w-2xl mt-4">
         <h2 className="text-lg font-bold mb-2">Gerenciar Funcionários</h2>
         <div className="flex gap-2 mb-2 flex-wrap">
-          <input type="text" placeholder="Nome" value={novoFuncionario.nome} onChange={e => setNovoFuncionario({ ...novoFuncionario, nome: e.target.value })} className="border p-2 rounded w-full sm:w-auto" />
-          <input type="text" placeholder="PIN" value={novoFuncionario.pin} onChange={e => setNovoFuncionario({ ...novoFuncionario, pin: e.target.value })} className="border p-2 rounded w-full sm:w-auto" />
+          <input
+            type="text"
+            placeholder="Nome"
+            value={novoFuncionario.nome}
+            onChange={e => setNovoFuncionario({ ...novoFuncionario, nome: e.target.value })}
+            className="border p-2 rounded w-full sm:w-auto"
+          />
+          <input
+            type="text"
+            placeholder="PIN"
+            value={novoFuncionario.pin}
+            onChange={e => setNovoFuncionario({ ...novoFuncionario, pin: e.target.value })}
+            className="border p-2 rounded w-full sm:w-auto"
+          />
           <button onClick={adicionarFuncionario} className="bg-blue-600 text-white px-4 py-2 rounded">Adicionar</button>
         </div>
         <ul className="space-y-2">
@@ -149,7 +192,7 @@ export default function AdminPage() {
         <button onClick={handleLimpar} className="bg-gray-600 px-4 py-2 rounded">Limpar</button>
       </div>
 
-      {/* Tabela */}
+      {/* Tabela de Registros */}
       <div className="overflow-x-auto w-full max-w-4xl">
         <table className="min-w-full bg-white text-black rounded shadow">
           <thead>
@@ -183,9 +226,13 @@ export default function AdminPage() {
 
       {/* Paginação */}
       <div className="flex justify-center space-x-2 my-4">
-        <button onClick={() => setPaginaAtual(paginaAtual - 1)} disabled={paginaAtual === 1} className="bg-gray-600 text-white px-4 py-2 rounded disabled:opacity-50">Anterior</button>
+        <button onClick={() => setPaginaAtual(paginaAtual - 1)} disabled={paginaAtual === 1} className="bg-gray-600 text-white px-4 py-2 rounded disabled:opacity-50">
+          Anterior
+        </button>
         <span>{paginaAtual} de {totalPaginas}</span>
-        <button onClick={() => setPaginaAtual(paginaAtual + 1)} disabled={paginaAtual === totalPaginas} className="bg-gray-600 text-white px-4 py-2 rounded disabled:opacity-50">Próxima</button>
+        <button onClick={() => setPaginaAtual(paginaAtual + 1)} disabled={paginaAtual === totalPaginas} className="bg-gray-600 text-white px-4 py-2 rounded disabled:opacity-50">
+          Próxima
+        </button>
       </div>
     </div>
   );
