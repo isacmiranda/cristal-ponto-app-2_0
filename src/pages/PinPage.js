@@ -138,7 +138,7 @@ export default function PinPage() {
           <img
             src="/logo.png" 
             alt="Logo Cristal Acquacenter"
-            className="w-12 h-12 md:w-16 md:h-16 object-contain"
+            className="w-14 h-14 md:w-16 md:h-16 object-contain"
           />
           <h1 className="text-2xl md:text-3xl font-bold">
             Sistema de Ponto Cristal Acquacenter
