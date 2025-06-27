@@ -1,11 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react'; 
 import { useNavigate } from 'react-router-dom';
 
 export default function AdminPage() {
   const [registros, setRegistros] = useState([]);
   const [todosRegistros, setTodosRegistros] = useState([]);
   const [paginaAtual, setPaginaAtual] = useState(1);
-  const registrosPorPagina = 31;
+  const registrosPorPagina = 62;
 
   const [filtroInicio, setFiltroInicio] = useState('');
   const [filtroFim, setFiltroFim] = useState('');
@@ -13,6 +13,14 @@ export default function AdminPage() {
   const [filtroPIN, setFiltroPIN] = useState('');
   const [funcionarios, setFuncionarios] = useState([]);
   const [novoFuncionario, setNovoFuncionario] = useState({ nome: '', pin: '' });
+  const [novoRegistro, setNovoRegistro] = useState({
+    data: '',
+    horario: '',
+    nome: '',
+    tipo: '',
+    pin: ''
+  });
+
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -20,8 +28,12 @@ export default function AdminPage() {
     const localFuncionarios = localStorage.getItem('funcionarios');
     if (localRegistros) {
       const data = JSON.parse(localRegistros);
-      setTodosRegistros(data);
-      setRegistros(data);
+      const ordenados = [...data].sort((a, b) =>
+        new Date(b.data.split('/').reverse().join('-')) -
+        new Date(a.data.split('/').reverse().join('-'))
+      );
+      setTodosRegistros(ordenados);
+      setRegistros(ordenados);
     }
     if (localFuncionarios) setFuncionarios(JSON.parse(localFuncionarios));
   }, []);
@@ -29,15 +41,20 @@ export default function AdminPage() {
   const handleBuscar = () => {
     const inicio = new Date(filtroInicio);
     const fim = new Date(filtroFim);
-    const filtrados = todosRegistros.filter(r => {
-      const dataObj = new Date(r.data.split('/').reverse().join('-'));
-      return (
-        (!filtroInicio || dataObj >= inicio) &&
-        (!filtroFim || dataObj <= fim) &&
-        (!filtroNome || r.nome.toLowerCase().includes(filtroNome.toLowerCase())) &&
-        (!filtroPIN || r.pin.includes(filtroPIN))
+    const filtrados = todosRegistros
+      .filter(r => {
+        const dataObj = new Date(r.data.split('/').reverse().join('-'));
+        return (
+          (!filtroInicio || dataObj >= inicio) &&
+          (!filtroFim || dataObj <= fim) &&
+          (!filtroNome || r.nome.toLowerCase().includes(filtroNome.toLowerCase())) &&
+          (!filtroPIN || r.pin.includes(filtroPIN))
+        );
+      })
+      .sort((a, b) =>
+        new Date(b.data.split('/').reverse().join('-')) -
+        new Date(a.data.split('/').reverse().join('-'))
       );
-    });
     setRegistros(filtrados);
     setPaginaAtual(1);
   };
@@ -74,7 +91,10 @@ export default function AdminPage() {
       const registrosAtualizados = todosRegistros.map(r => {
         if (r.pin === pinAntigo) return { ...r, nome, pin };
         return r;
-      });
+      }).sort((a, b) =>
+        new Date(b.data.split('/').reverse().join('-')) -
+        new Date(a.data.split('/').reverse().join('-'))
+      );
 
       setTodosRegistros(registrosAtualizados);
       setRegistros(registrosAtualizados);
@@ -88,6 +108,34 @@ export default function AdminPage() {
     localStorage.setItem('funcionarios', JSON.stringify(atualizados));
   };
 
+  const adicionarRegistro = () => {
+    if (
+      !novoRegistro.data ||
+      !novoRegistro.horario ||
+      !novoRegistro.nome ||
+      !novoRegistro.tipo ||
+      !novoRegistro.pin
+    ) return;
+
+    const atualizado = [...todosRegistros, novoRegistro];
+    const ordenados = atualizado.sort((a, b) =>
+      new Date(b.data.split('/').reverse().join('-')) -
+      new Date(a.data.split('/').reverse().join('-'))
+    );
+
+    setTodosRegistros(ordenados);
+    setRegistros(ordenados);
+    localStorage.setItem('registros', JSON.stringify(ordenados));
+
+    setNovoRegistro({
+      data: '',
+      horario: '',
+      nome: '',
+      tipo: '',
+      pin: ''
+    });
+  };
+
   const editarRegistro = (indexGlobal) => {
     const atual = registros[indexGlobal];
     const data = prompt('Nova data (DD/MM/AAAA):', atual.data);
@@ -97,11 +145,11 @@ export default function AdminPage() {
       const atualizado = { ...atual, data, horario, tipo };
       const novosReg = [...registros];
       novosReg[indexGlobal] = atualizado;
-      novosReg.sort((a, b) =>
+      const ordenadosReg = novosReg.sort((a, b) =>
         new Date(b.data.split('/').reverse().join('-')) -
         new Date(a.data.split('/').reverse().join('-'))
       );
-      setRegistros(novosReg);
+      setRegistros(ordenadosReg);
 
       const idx = todosRegistros.findIndex(r =>
         r.data === atual.data &&
@@ -112,12 +160,12 @@ export default function AdminPage() {
       if (idx !== -1) {
         const todosAtu = [...todosRegistros];
         todosAtu[idx] = atualizado;
-        todosAtu.sort((a, b) =>
+        const ordenadosTodos = todosAtu.sort((a, b) =>
           new Date(b.data.split('/').reverse().join('-')) -
           new Date(a.data.split('/').reverse().join('-'))
         );
-        setTodosRegistros(todosAtu);
-        localStorage.setItem('registros', JSON.stringify(todosAtu));
+        setTodosRegistros(ordenadosTodos);
+        localStorage.setItem('registros', JSON.stringify(ordenadosTodos));
       }
     }
   };
@@ -143,14 +191,48 @@ export default function AdminPage() {
   );
 
   return (
-    <div className="flex flex-col items-center min-h-screen bg-gradient-to-r from-blue-500 to-blue-700 text-white px-4 py-6">
-      <div className="flex justify-between w-full p-4 bg-blue-800">
+    <div
+      className="flex flex-col items-center min-h-screen bg-gradient-to-r from-blue-500 to-blue-700 text-white px-4 py-6"
+      style={{ backgroundColor: 'transparent' }} // Para evitar conflito na impressão
+    >
+      {/* Estilos de Impressão */}
+      <style>{`
+        @media print {
+          body {
+            background: white !important;
+            color: black !important;
+          }
+          #root > div {
+            background: white !important;
+            color: black !important;
+          }
+          .no-print {
+            display: none !important;
+          }
+          table {
+            width: 100% !important;
+            border-collapse: collapse;
+          }
+          table, th, td {
+            border: 1px solid black !important;
+            color: black !important;
+          }
+          caption {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 10px;
+          }
+        }
+      `}</style>
+
+      {/* Header */}
+      <div className="flex justify-between w-full p-4 bg-blue-800 no-print">
         <h1 className="text-xl font-semibold">Admin - Sistema de Ponto Cristal Acquacenter</h1>
         <button onClick={() => navigate('/')} className="bg-gray-700 hover:bg-gray-600 p-2 rounded">🔙</button>
       </div>
 
       {/* Funcionários */}
-      <div className="bg-white text-black rounded-lg shadow p-4 w-full max-w-2xl mt-4">
+      <div className="bg-white text-black rounded-lg shadow p-4 w-full max-w-2xl mt-4 no-print">
         <h2 className="text-lg font-bold mb-2">Gerenciar Funcionários</h2>
         <div className="flex gap-2 mb-2 flex-wrap">
           <input
@@ -183,7 +265,7 @@ export default function AdminPage() {
       </div>
 
       {/* Filtros */}
-      <div className="flex flex-wrap justify-center gap-2 my-4 w-full max-w-4xl">
+      <div className="flex flex-wrap justify-center gap-2 my-4 w-full max-w-4xl no-print">
         <input type="date" value={filtroInicio} onChange={e => setFiltroInicio(e.target.value)} className="p-2 rounded text-black w-full sm:w-auto" />
         <input type="date" value={filtroFim} onChange={e => setFiltroFim(e.target.value)} className="p-2 rounded text-black w-full sm:w-auto" />
         <input type="text" placeholder="Filtrar por nome" value={filtroNome} onChange={e => setFiltroNome(e.target.value)} className="p-2 rounded text-black w-full sm:w-auto" />
@@ -192,17 +274,47 @@ export default function AdminPage() {
         <button onClick={handleLimpar} className="bg-gray-600 px-4 py-2 rounded">Limpar</button>
       </div>
 
-      {/* Tabela de Registros */}
+      {/* Adicionar Registro */}
+      <div className="bg-white text-black rounded-lg shadow p-4 w-full max-w-4xl mb-4 no-print">
+        <h2 className="text-lg font-bold mb-2">Adicionar Registro</h2>
+        <div className="flex flex-wrap gap-2">
+          <input type="date" value={novoRegistro.data} onChange={e => setNovoRegistro({ ...novoRegistro, data: e.target.value })} className="p-2 rounded border w-full sm:w-auto" />
+          <input type="time" value={novoRegistro.horario} onChange={e => setNovoRegistro({ ...novoRegistro, horario: e.target.value })} className="p-2 rounded border w-full sm:w-auto" />
+          <input type="text" placeholder="Nome" value={novoRegistro.nome} onChange={e => setNovoRegistro({ ...novoRegistro, nome: e.target.value })} className="p-2 rounded border w-full sm:w-auto" />
+          <select value={novoRegistro.tipo} onChange={e => setNovoRegistro({ ...novoRegistro, tipo: e.target.value })} className="p-2 rounded border w-full sm:w-auto">
+            <option value="">Tipo</option>
+            <option value="entrada">Entrada</option>
+            <option value="saida">Saída</option>
+          </select>
+          <input type="text" placeholder="PIN" value={novoRegistro.pin} onChange={e => setNovoRegistro({ ...novoRegistro, pin: e.target.value })} className="p-2 rounded border w-full sm:w-auto" />
+          <button onClick={adicionarRegistro} className="bg-green-600 text-white px-4 py-2 rounded">Adicionar</button>
+        </div>
+      </div>
+
+      {/* Botão Imprimir */}
+      <div className="flex justify-end w-full max-w-4xl mb-2 no-print">
+        <button
+          onClick={() => window.print()}
+          className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-500"
+        >
+          🖨️ Imprimir Tabela
+        </button>
+      </div>
+
+      {/* Tabela */}
       <div className="overflow-x-auto w-full max-w-4xl">
         <table className="min-w-full bg-white text-black rounded shadow">
+          <caption className="text-lg font-bold p-2">
+            Registro de Ponto - Cristal Acquacenter
+          </caption>
           <thead>
             <tr className="bg-blue-200">
               <th className="p-2">Data</th>
-              <th className="p-2">Horário</th>
               <th className="p-2">Nome</th>
+              <th className="p-2">Horário</th>
               <th className="p-2">Tipo</th>
-              <th className="p-2">Editar</th>
-              <th className="p-2">Excluir</th>
+              <th className="p-2 no-print">Editar</th>
+              <th className="p-2 no-print">Excluir</th>
             </tr>
           </thead>
           <tbody>
@@ -212,11 +324,25 @@ export default function AdminPage() {
                 <td className="p-2">{r.horario}</td>
                 <td className="p-2">{r.nome}</td>
                 <td className="p-2">{r.tipo}</td>
-                <td className="p-2">
-                  <button onClick={() => editarRegistro((paginaAtual - 1) * registrosPorPagina + i)} className="bg-yellow-400 px-2 py-1 rounded">✏️</button>
+                <td className="p-2 no-print">
+                  <button
+                    onClick={() =>
+                      editarRegistro((paginaAtual - 1) * registrosPorPagina + i)
+                    }
+                    className="bg-yellow-400 px-2 py-1 rounded"
+                  >
+                    ✏️
+                  </button>
                 </td>
-                <td className="p-2">
-                  <button onClick={() => removerRegistro((paginaAtual - 1) * registrosPorPagina + i)} className="bg-red-400 px-2 py-1 rounded">🗑️</button>
+                <td className="p-2 no-print">
+                  <button
+                    onClick={() =>
+                      removerRegistro((paginaAtual - 1) * registrosPorPagina + i)
+                    }
+                    className="bg-red-400 px-2 py-1 rounded"
+                  >
+                    🗑️
+                  </button>
                 </td>
               </tr>
             ))}
@@ -225,12 +351,20 @@ export default function AdminPage() {
       </div>
 
       {/* Paginação */}
-      <div className="flex justify-center space-x-2 my-4">
-        <button onClick={() => setPaginaAtual(paginaAtual - 1)} disabled={paginaAtual === 1} className="bg-gray-600 text-white px-4 py-2 rounded disabled:opacity-50">
+      <div className="flex justify-center space-x-2 my-4 no-print">
+        <button
+          onClick={() => setPaginaAtual(paginaAtual - 1)}
+          disabled={paginaAtual === 1}
+          className="bg-gray-600 text-white px-4 py-2 rounded disabled:opacity-50"
+        >
           Anterior
         </button>
         <span>{paginaAtual} de {totalPaginas}</span>
-        <button onClick={() => setPaginaAtual(paginaAtual + 1)} disabled={paginaAtual === totalPaginas} className="bg-gray-600 text-white px-4 py-2 rounded disabled:opacity-50">
+        <button
+          onClick={() => setPaginaAtual(paginaAtual + 1)}
+          disabled={paginaAtual === totalPaginas}
+          className="bg-gray-600 text-white px-4 py-2 rounded disabled:opacity-50"
+        >
           Próxima
         </button>
       </div>
