@@ -108,100 +108,39 @@ export default function AdminPage() {
     localStorage.setItem('funcionarios', JSON.stringify(atualizados));
   };
 
- const adicionarRegistro = () => {
-  if (
-    !novoRegistro.data ||
-    !novoRegistro.horario ||
-    !novoRegistro.nome ||
-    !novoRegistro.tipo ||
-    !novoRegistro.pin
-  ) return;
-
-  // Formatar a data para o padrão 'DD/MM/AAAA' caso não esteja
-  const dataFormatada = novoRegistro.data.split('-').reverse().join('/');
-  
-  const atualizado = { ...novoRegistro, data: dataFormatada };
-  
-  const atualizadoRegistros = [...todosRegistros, atualizado];
-  const ordenados = atualizadoRegistros.sort((a, b) =>
-    new Date(b.data.split('/').reverse().join('-')) -
-    new Date(a.data.split('/').reverse().join('-'))
-  );
-
-  setTodosRegistros(ordenados);
-  setRegistros(ordenados);
-  localStorage.setItem('registros', JSON.stringify(ordenados));
-
-  setNovoRegistro({
-    data: '',
-    horario: '',
-    nome: '',
-    tipo: '',
-    pin: ''
-  });
-};
-
-const editarRegistro = (indexGlobal) => {
-  const atual = registros[indexGlobal];
-  
- 
-  const data = prompt('Nova data (DD/MM/AAAA):', atual.data);
-  const horario = prompt('Novo horário (HH:MM:SS):', atual.horario);
-  const tipo = prompt('Novo tipo (entrada/saida):', atual.tipo);
-
- 
-  if (data && horario && tipo) {
-
-    const dataFormatada = data.split('/').reverse().join('-');
-    
-  
-    const horarioFormatado = horario.match(/^([01]?[0-9]|2[0-3]):([0-5]?[0-9]):([0-5]?[0-9])$/);
-    
-    if (!horarioFormatado) {
-      alert('O horário informado não está no formato válido (HH:MM:SS)');
-      return;
-    }
-
-    
-    const atualizado = { ...atual, data: dataFormatada, horario, tipo };
-
-   
-    const novosReg = [...registros];
-    novosReg[indexGlobal] = atualizado;
-
-
-    const ordenadosReg = novosReg.sort((a, b) =>
-      new Date(b.data) - new Date(a.data)
-    );
-    setRegistros(ordenadosReg);
-
-  
-    const idx = todosRegistros.findIndex(r =>
-      r.data === atual.data &&
-      r.horario === atual.horario &&
-      r.nome === atual.nome &&
-      r.tipo === atual.tipo
-    );
-    
-   
-    if (idx !== -1) {
-      const todosAtu = [...todosRegistros];
-      todosAtu[idx] = atualizado;
-
-     
-      const ordenadosTodos = todosAtu.sort((a, b) =>
-        new Date(b.data) - new Date(a.data)
+  const editarRegistro = (indexGlobal) => {
+    const atual = registros[indexGlobal];
+    const data = prompt('Nova data (DD/MM/AAAA):', atual.data);
+    const horario = prompt('Novo horário:', atual.horario);
+    const tipo = prompt('Novo tipo (entrada/saida):', atual.tipo);
+    if (data && horario && tipo) {
+      const atualizado = { ...atual, data, horario, tipo };
+      const novosReg = [...registros];
+      novosReg[indexGlobal] = atualizado;
+      novosReg.sort((a, b) =>
+        new Date(b.data.split('/').reverse().join('-')) -
+        new Date(a.data.split('/').reverse().join('-'))
       );
+      setRegistros(novosReg);
 
-      
-      setTodosRegistros(ordenadosTodos);
-      localStorage.setItem('registros', JSON.stringify(ordenadosTodos));
+      const idx = todosRegistros.findIndex(r =>
+        r.data === atual.data &&
+        r.horario === atual.horario &&
+        r.nome === atual.nome &&
+        r.tipo === atual.tipo
+      );
+      if (idx !== -1) {
+        const todosAtu = [...todosRegistros];
+        todosAtu[idx] = atualizado;
+        todosAtu.sort((a, b) =>
+          new Date(b.data.split('/').reverse().join('-')) -
+          new Date(a.data.split('/').reverse().join('-'))
+        );
+        setTodosRegistros(todosAtu);
+        localStorage.setItem('registros', JSON.stringify(todosAtu));
+      }
     }
-  }
-};
-
-
-
+  };
 
   const removerRegistro = (indexGlobal) => {
     const reg = registros[indexGlobal];
@@ -343,8 +282,8 @@ const editarRegistro = (indexGlobal) => {
           <thead>
             <tr className="bg-blue-200">
               <th className="p-2">Data</th>
-              <th className="p-2">Horário</th>
               <th className="p-2">Nome</th>
+              <th className="p-2">Horário</th>
               <th className="p-2">Tipo</th>
               <th className="p-2 no-print">Editar</th>
               <th className="p-2 no-print">Excluir</th>
