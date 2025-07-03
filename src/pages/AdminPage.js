@@ -282,8 +282,8 @@ export default function AdminPage() {
           <thead>
             <tr className="bg-blue-200">
               <th className="p-2">Data</th>
-              <th className="p-2">Nome</th>
               <th className="p-2">Horário</th>
+              <th className="p-2">Nome</th>
               <th className="p-2">Tipo</th>
               <th className="p-2 no-print">Editar</th>
               <th className="p-2 no-print">Excluir</th>
