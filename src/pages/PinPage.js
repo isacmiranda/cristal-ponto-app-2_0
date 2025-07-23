@@ -10,6 +10,8 @@ export default function PinPage() {
   const [bloqueado, setBloqueado] = useState(false);
   const [registros, setRegistros] = useState([]);
   const [funcionarios, setFuncionarios] = useState([]);
+  const [mostrarTipo, setMostrarTipo] = useState(false);
+  const [funcionarioAtual, setFuncionarioAtual] = useState(null);
 
   const navigate = useNavigate();
 
@@ -53,27 +55,30 @@ export default function PinPage() {
     }
   }, [mensagem]);
 
-  const registrarPonto = () => {
+  const validarPin = () => {
     if (!pin || bloqueado) return;
 
-    setBloqueado(true);
     const funcionario = funcionarios.find(f => f.pin === pin);
-
     if (!funcionario) {
       setMensagem('PIN inválido!');
       setPin('');
-      setBloqueado(false);
       return;
     }
+
+    setFuncionarioAtual(funcionario);
+    setMostrarTipo(true);
+  };
+
+  const registrarPonto = (tipo) => {
+    if (!funcionarioAtual) return;
 
     const agora = new Date();
     const data = agora.toLocaleDateString('pt-BR');
     const horario = agora.toLocaleTimeString('pt-BR');
-    const tipo = obterTipoRegistro(pin);
 
     const novoRegistro = {
       pin,
-      nome: funcionario.nome,
+      nome: funcionarioAtual.nome,
       data,
       horario,
       tipo,
@@ -83,26 +88,43 @@ export default function PinPage() {
     setRegistros(novosRegistros);
     localStorage.setItem('registros', JSON.stringify(novosRegistros));
 
-    setMensagem(tipo === 'entrada'
-      ? `Bom trabalho, ${funcionario.nome}!`
-      : `Até logo, ${funcionario.nome}!`
-    );
+    let msg = '';
+    switch (tipo) {
+      case 'entrada':
+        msg = `Bom trabalho, ${funcionarioAtual.nome}!`;
+        break;
+      case 'saida':
+        msg = `Até logo, ${funcionarioAtual.nome}!`;
+        break;
+      case 'intervalo ida':
+        msg = `Bom intervalo, ${funcionarioAtual.nome}!`;
+        break;
+      case 'intervalo volta':
+        msg = `Bem-vindo de volta, ${funcionarioAtual.nome}!`;
+        break;
+      default:
+        msg = `Registro realizado.`;
+    }
 
+    setMensagem(msg);
     falarTexto(tipo);
     playConfirmationSound();
     setPin('');
+    setFuncionarioAtual(null);
+    setMostrarTipo(false);
+    setBloqueado(true);
     setTimeout(() => setBloqueado(false), 2000);
-  };
-
-  const obterTipoRegistro = (pin) => {
-    const registrosDoUsuario = registros.filter(r => r.pin === pin);
-    const ultimo = registrosDoUsuario[registrosDoUsuario.length - 1];
-    return !ultimo || ultimo.tipo === 'saida' ? 'entrada' : 'saida';
   };
 
   const falarTexto = (tipo) => {
     if (!('speechSynthesis' in window)) return;
-    const texto = tipo === 'entrada' ? 'Entrada registrada' : 'Saída registrada';
+    const textos = {
+      entrada: 'Entrada registrada',
+      saida: 'Saída registrada',
+      'intervalo ida': 'Início de intervalo registrado',
+      'intervalo volta': 'Retorno de intervalo registrado'
+    };
+    const texto = textos[tipo] || 'Registro realizado';
     const u = new SpeechSynthesisUtterance(texto);
     u.lang = 'pt-BR';
     u.rate = 1;
@@ -123,7 +145,7 @@ export default function PinPage() {
       setPin('');
       setMensagem('');
     } else if (v === 'OK') {
-      registrarPonto();
+      validarPin();
     } else if (pin.length < 6) {
       setPin(p => p + v);
     }
@@ -135,14 +157,8 @@ export default function PinPage() {
     <div className="min-h-screen bg-gradient-to-b from-blue-900 to-blue-500 text-white flex flex-col items-center justify-center px-4 py-6">
       <div className="text-center mb-6">
         <div className="flex items-center justify-center gap-4 flex-wrap mb-2">
-          <img
-            src="/logo.png" 
-            alt="Logo Cristal Acquacenter"
-            className="w-14 h-14 md:w-16 md:h-16 object-contain"
-          />
-          <h1 className="text-2xl md:text-3xl font-bold">
-            Sistema de Ponto Cristal Acquacenter
-          </h1>
+          <img src="/logo.png" alt="Logo Cristal Acquacenter" className="w-14 h-14 md:w-16 md:h-16 object-contain" />
+          <h1 className="text-2xl md:text-3xl font-bold">Sistema de Ponto Cristal Acquacenter</h1>
         </div>
         <p className="text-lg md:text-xl flex items-center gap-4 justify-center">
           🕒 {horaAtual}
@@ -171,6 +187,23 @@ export default function PinPage() {
       {mensagem && (
         <div className="mt-6 bg-yellow-400 text-black px-6 py-3 rounded-xl text-lg text-center max-w-xs sm:max-w-md font-bold">
           {mensagem}
+        </div>
+      )}
+
+      {mostrarTipo && (
+        <div className="mt-6 bg-white/20 p-4 rounded-lg text-center">
+          <h2 className="text-lg mb-2 font-bold">Selecione o tipo de registro:</h2>
+          <div className="flex flex-wrap gap-2 justify-center">
+            {['entrada', 'intervalo ida', 'intervalo volta', 'saida'].map(tipo => (
+              <button
+                key={tipo}
+                onClick={() => registrarPonto(tipo)}
+                className="bg-white text-blue-900 font-bold px-4 py-2 rounded-lg hover:bg-blue-200"
+              >
+                {tipo.toUpperCase()}
+              </button>
+            ))}
+          </div>
         </div>
       )}
 

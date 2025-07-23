@@ -29,8 +29,7 @@ export default function AdminPage() {
     if (localRegistros) {
       const data = JSON.parse(localRegistros);
       const ordenados = [...data].sort((a, b) =>
-        new Date(b.data.split('/').reverse().join('-')) -
-        new Date(a.data.split('/').reverse().join('-'))
+        new Date(b.data.split('/').reverse().join('-')) - new Date(a.data.split('/').reverse().join('-'))
       );
       setTodosRegistros(ordenados);
       setRegistros(ordenados);
@@ -52,8 +51,7 @@ export default function AdminPage() {
         );
       })
       .sort((a, b) =>
-        new Date(b.data.split('/').reverse().join('-')) -
-        new Date(a.data.split('/').reverse().join('-'))
+        new Date(b.data.split('/').reverse().join('-')) - new Date(a.data.split('/').reverse().join('-'))
       );
     setRegistros(filtrados);
     setPaginaAtual(1);
@@ -76,6 +74,27 @@ export default function AdminPage() {
     setNovoFuncionario({ nome: '', pin: '' });
   };
 
+  const adicionarRegistro = () => {
+    if (
+      !novoRegistro.data ||
+      !novoRegistro.horario ||
+      !novoRegistro.nome ||
+      !novoRegistro.tipo ||
+      !novoRegistro.pin
+    ) return;
+
+    const novo = { ...novoRegistro };
+
+    const atualizados = [novo, ...todosRegistros];
+    atualizados.sort((a, b) =>
+      new Date(b.data.split('/').reverse().join('-')) - new Date(a.data.split('/').reverse().join('-'))
+    );
+    setTodosRegistros(atualizados);
+    setRegistros(atualizados);
+    localStorage.setItem('registros', JSON.stringify(atualizados));
+    setNovoRegistro({ data: '', horario: '', nome: '', tipo: '', pin: '' });
+  };
+
   const editarFuncionario = (index) => {
     const atual = funcionarios[index];
     const nomeAntigo = atual.nome;
@@ -92,8 +111,7 @@ export default function AdminPage() {
         if (r.pin === pinAntigo) return { ...r, nome, pin };
         return r;
       }).sort((a, b) =>
-        new Date(b.data.split('/').reverse().join('-')) -
-        new Date(a.data.split('/').reverse().join('-'))
+        new Date(b.data.split('/').reverse().join('-')) - new Date(a.data.split('/').reverse().join('-'))
       );
 
       setTodosRegistros(registrosAtualizados);
@@ -118,8 +136,7 @@ export default function AdminPage() {
       const novosReg = [...registros];
       novosReg[indexGlobal] = atualizado;
       novosReg.sort((a, b) =>
-        new Date(b.data.split('/').reverse().join('-')) -
-        new Date(a.data.split('/').reverse().join('-'))
+        new Date(b.data.split('/').reverse().join('-')) - new Date(a.data.split('/').reverse().join('-'))
       );
       setRegistros(novosReg);
 
@@ -133,8 +150,7 @@ export default function AdminPage() {
         const todosAtu = [...todosRegistros];
         todosAtu[idx] = atualizado;
         todosAtu.sort((a, b) =>
-          new Date(b.data.split('/').reverse().join('-')) -
-          new Date(a.data.split('/').reverse().join('-'))
+          new Date(b.data.split('/').reverse().join('-')) - new Date(a.data.split('/').reverse().join('-'))
         );
         setTodosRegistros(todosAtu);
         localStorage.setItem('registros', JSON.stringify(todosAtu));
@@ -163,18 +179,10 @@ export default function AdminPage() {
   );
 
   return (
-    <div
-      className="flex flex-col items-center min-h-screen bg-gradient-to-r from-blue-500 to-blue-700 text-white px-4 py-6"
-      style={{ backgroundColor: 'transparent' }} // Para evitar conflito na impressão
-    >
-      {/* Estilos de Impressão */}
+    <div className="flex flex-col items-center min-h-screen bg-gradient-to-r from-blue-500 to-blue-700 text-white px-4 py-6">
       <style>{`
         @media print {
-          body {
-            background: white !important;
-            color: black !important;
-          }
-          #root > div {
+          body, #root > div {
             background: white !important;
             color: black !important;
           }
@@ -197,30 +205,17 @@ export default function AdminPage() {
         }
       `}</style>
 
-      {/* Header */}
       <div className="flex justify-between w-full p-4 bg-blue-800 no-print">
         <h1 className="text-xl font-semibold">Admin - Sistema de Ponto Cristal Acquacenter</h1>
         <button onClick={() => navigate('/')} className="bg-gray-700 hover:bg-gray-600 p-2 rounded">🔙</button>
       </div>
 
-      {/* Funcionários */}
+      {/* Gerenciar Funcionários */}
       <div className="bg-white text-black rounded-lg shadow p-4 w-full max-w-2xl mt-4 no-print">
         <h2 className="text-lg font-bold mb-2">Gerenciar Funcionários</h2>
         <div className="flex gap-2 mb-2 flex-wrap">
-          <input
-            type="text"
-            placeholder="Nome"
-            value={novoFuncionario.nome}
-            onChange={e => setNovoFuncionario({ ...novoFuncionario, nome: e.target.value })}
-            className="border p-2 rounded w-full sm:w-auto"
-          />
-          <input
-            type="text"
-            placeholder="PIN"
-            value={novoFuncionario.pin}
-            onChange={e => setNovoFuncionario({ ...novoFuncionario, pin: e.target.value })}
-            className="border p-2 rounded w-full sm:w-auto"
-          />
+          <input type="text" placeholder="Nome" value={novoFuncionario.nome} onChange={e => setNovoFuncionario({ ...novoFuncionario, nome: e.target.value })} className="border p-2 rounded w-full sm:w-auto" />
+          <input type="text" placeholder="PIN" value={novoFuncionario.pin} onChange={e => setNovoFuncionario({ ...novoFuncionario, pin: e.target.value })} className="border p-2 rounded w-full sm:w-auto" />
           <button onClick={adicionarFuncionario} className="bg-blue-600 text-white px-4 py-2 rounded">Adicionar</button>
         </div>
         <ul className="space-y-2">
@@ -257,18 +252,17 @@ export default function AdminPage() {
             <option value="">Tipo</option>
             <option value="entrada">Entrada</option>
             <option value="saida">Saída</option>
+            <option value="intervalo ida">Intervalo Ida</option>
+            <option value="intervalo volta">Intervalo Volta</option>
           </select>
           <input type="text" placeholder="PIN" value={novoRegistro.pin} onChange={e => setNovoRegistro({ ...novoRegistro, pin: e.target.value })} className="p-2 rounded border w-full sm:w-auto" />
           <button onClick={adicionarRegistro} className="bg-green-600 text-white px-4 py-2 rounded">Adicionar</button>
         </div>
       </div>
 
-      {/* Botão Imprimir */}
+      {/* Botão imprimir */}
       <div className="flex justify-end w-full max-w-4xl mb-2 no-print">
-        <button
-          onClick={() => window.print()}
-          className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-500"
-        >
+        <button onClick={() => window.print()} className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-500">
           🖨️ Imprimir Tabela
         </button>
       </div>
@@ -276,9 +270,7 @@ export default function AdminPage() {
       {/* Tabela */}
       <div className="overflow-x-auto w-full max-w-4xl">
         <table className="min-w-full bg-white text-black rounded shadow">
-          <caption className="text-lg font-bold p-2">
-            Registro de Ponto - Cristal Acquacenter
-          </caption>
+          <caption className="text-lg font-bold p-2">Registro de Ponto - Cristal Acquacenter</caption>
           <thead>
             <tr className="bg-blue-200">
               <th className="p-2">Data</th>
@@ -297,24 +289,10 @@ export default function AdminPage() {
                 <td className="p-2">{r.nome}</td>
                 <td className="p-2">{r.tipo}</td>
                 <td className="p-2 no-print">
-                  <button
-                    onClick={() =>
-                      editarRegistro((paginaAtual - 1) * registrosPorPagina + i)
-                    }
-                    className="bg-yellow-400 px-2 py-1 rounded"
-                  >
-                    ✏️
-                  </button>
+                  <button onClick={() => editarRegistro((paginaAtual - 1) * registrosPorPagina + i)} className="bg-yellow-400 px-2 py-1 rounded">✏️</button>
                 </td>
                 <td className="p-2 no-print">
-                  <button
-                    onClick={() =>
-                      removerRegistro((paginaAtual - 1) * registrosPorPagina + i)
-                    }
-                    className="bg-red-400 px-2 py-1 rounded"
-                  >
-                    🗑️
-                  </button>
+                  <button onClick={() => removerRegistro((paginaAtual - 1) * registrosPorPagina + i)} className="bg-red-400 px-2 py-1 rounded">🗑️</button>
                 </td>
               </tr>
             ))}
@@ -324,19 +302,11 @@ export default function AdminPage() {
 
       {/* Paginação */}
       <div className="flex justify-center space-x-2 my-4 no-print">
-        <button
-          onClick={() => setPaginaAtual(paginaAtual - 1)}
-          disabled={paginaAtual === 1}
-          className="bg-gray-600 text-white px-4 py-2 rounded disabled:opacity-50"
-        >
+        <button onClick={() => setPaginaAtual(paginaAtual - 1)} disabled={paginaAtual === 1} className="bg-gray-600 text-white px-4 py-2 rounded disabled:opacity-50">
           Anterior
         </button>
         <span>{paginaAtual} de {totalPaginas}</span>
-        <button
-          onClick={() => setPaginaAtual(paginaAtual + 1)}
-          disabled={paginaAtual === totalPaginas}
-          className="bg-gray-600 text-white px-4 py-2 rounded disabled:opacity-50"
-        >
+        <button onClick={() => setPaginaAtual(paginaAtual + 1)} disabled={paginaAtual === totalPaginas} className="bg-gray-600 text-white px-4 py-2 rounded disabled:opacity-50">
           Próxima
         </button>
       </div>
