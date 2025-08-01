@@ -5,7 +5,7 @@ export default function AdminPage() {
   const [registros, setRegistros] = useState([]);
   const [todosRegistros, setTodosRegistros] = useState([]);
   const [paginaAtual, setPaginaAtual] = useState(1);
-  const registrosPorPagina = 62;
+  const registrosPorPagina = 104;
 
   const [filtroInicio, setFiltroInicio] = useState('');
   const [filtroFim, setFiltroFim] = useState('');
