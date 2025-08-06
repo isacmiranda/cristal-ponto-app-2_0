@@ -213,6 +213,10 @@ export default function PinPage() {
       >
         ⚙️ Área Admin
       </button>
+       <footer className="text-white text-center py-2 text-sm shadow-md mt-10">
+        Desenvolvido por <span className="font-semibold">Isac Miranda ©</span> - 2025
+      </footer>
     </div>
+    
   );
 }
