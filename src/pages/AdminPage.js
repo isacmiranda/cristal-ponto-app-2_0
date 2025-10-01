@@ -21,6 +21,8 @@ export default function AdminPage() {
     pin: ''
   });
 
+  const [ordenacao, setOrdenacao] = useState({ campo: '', direcao: 'asc' });
+
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -28,11 +30,9 @@ export default function AdminPage() {
     const localFuncionarios = localStorage.getItem('funcionarios');
     if (localRegistros) {
       const data = JSON.parse(localRegistros);
-      const ordenados = [...data].sort((a, b) =>
-        new Date(b.data.split('/').reverse().join('-')) - new Date(a.data.split('/').reverse().join('-'))
-      );
-      setTodosRegistros(ordenados);
-      setRegistros(ordenados);
+      data.sort(multiSort); // usa ordenação multi-colunas
+      setTodosRegistros(data);
+      setRegistros(data);
     }
     if (localFuncionarios) setFuncionarios(JSON.parse(localFuncionarios));
   }, []);
@@ -50,9 +50,7 @@ export default function AdminPage() {
           (!filtroPIN || r.pin.includes(filtroPIN))
         );
       })
-      .sort((a, b) =>
-        new Date(b.data.split('/').reverse().join('-')) - new Date(a.data.split('/').reverse().join('-'))
-      );
+      .sort(multiSort);
     setRegistros(filtrados);
     setPaginaAtual(1);
   };
@@ -84,11 +82,8 @@ export default function AdminPage() {
     ) return;
 
     const novo = { ...novoRegistro };
-
     const atualizados = [novo, ...todosRegistros];
-    atualizados.sort((a, b) =>
-      new Date(b.data.split('/').reverse().join('-')) - new Date(a.data.split('/').reverse().join('-'))
-    );
+    atualizados.sort(multiSort);
     setTodosRegistros(atualizados);
     setRegistros(atualizados);
     localStorage.setItem('registros', JSON.stringify(atualizados));
@@ -110,9 +105,7 @@ export default function AdminPage() {
       const registrosAtualizados = todosRegistros.map(r => {
         if (r.pin === pinAntigo) return { ...r, nome, pin };
         return r;
-      }).sort((a, b) =>
-        new Date(b.data.split('/').reverse().join('-')) - new Date(a.data.split('/').reverse().join('-'))
-      );
+      }).sort(multiSort);
 
       setTodosRegistros(registrosAtualizados);
       setRegistros(registrosAtualizados);
@@ -135,9 +128,7 @@ export default function AdminPage() {
       const atualizado = { ...atual, data, horario, tipo };
       const novosReg = [...registros];
       novosReg[indexGlobal] = atualizado;
-      novosReg.sort((a, b) =>
-        new Date(b.data.split('/').reverse().join('-')) - new Date(a.data.split('/').reverse().join('-'))
-      );
+      novosReg.sort(multiSort);
       setRegistros(novosReg);
 
       const idx = todosRegistros.findIndex(r =>
@@ -149,9 +140,7 @@ export default function AdminPage() {
       if (idx !== -1) {
         const todosAtu = [...todosRegistros];
         todosAtu[idx] = atualizado;
-        todosAtu.sort((a, b) =>
-          new Date(b.data.split('/').reverse().join('-')) - new Date(a.data.split('/').reverse().join('-'))
-        );
+        todosAtu.sort(multiSort);
         setTodosRegistros(todosAtu);
         localStorage.setItem('registros', JSON.stringify(todosAtu));
       }
@@ -170,6 +159,45 @@ export default function AdminPage() {
     setRegistros(novosReg);
     setTodosRegistros(novosTodos);
     localStorage.setItem('registros', JSON.stringify(novosTodos));
+  };
+
+  // Função de ordenação multi-colunas
+  const multiSort = (a, b) => {
+    const parseData = d => new Date(d.split('/').reverse().join('-'));
+    let res = parseData(b.data) - parseData(a.data); // Data descendente
+    if (res === 0) res = a.horario.localeCompare(b.horario);
+    if (res === 0) res = a.nome.localeCompare(b.nome);
+    if (res === 0) res = a.tipo.localeCompare(b.tipo);
+    return res;
+  };
+
+  // Função de ordenação clicando no cabeçalho
+  const ordenarPor = (campo) => {
+    let direcao = 'asc';
+    if (ordenacao.campo === campo && ordenacao.direcao === 'asc') {
+      direcao = 'desc';
+    }
+    setOrdenacao({ campo, direcao });
+
+    const registrosOrdenados = [...registros].sort((a, b) => {
+      let valorA = a[campo];
+      let valorB = b[campo];
+
+      if (campo === 'data') {
+        valorA = new Date(a.data.split('/').reverse().join('-'));
+        valorB = new Date(b.data.split('/').reverse().join('-'));
+      }
+      if (campo === 'horario') {
+        valorA = a.horario;
+        valorB = b.horario;
+      }
+
+      if (valorA < valorB) return direcao === 'asc' ? -1 : 1;
+      if (valorA > valorB) return direcao === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+    setRegistros(registrosOrdenados);
   };
 
   const totalPaginas = Math.ceil(registros.length / registrosPorPagina);
@@ -273,10 +301,18 @@ export default function AdminPage() {
           <caption className="text-lg font-bold p-2">Registro de Ponto - Cristal Acquacenter</caption>
           <thead>
             <tr className="bg-blue-200">
-              <th className="p-2">Data</th>
-              <th className="p-2">Horário</th>
-              <th className="p-2">Nome</th>
-              <th className="p-2">Tipo</th>
+              <th className="p-2 cursor-pointer" onClick={() => ordenarPor('data')}>
+                Data {ordenacao.campo === 'data' ? (ordenacao.direcao === 'asc' ? '⬆️' : '⬇️') : ''}
+              </th>
+              <th className="p-2 cursor-pointer" onClick={() => ordenarPor('horario')}>
+                Horário {ordenacao.campo === 'horario' ? (ordenacao.direcao === 'asc' ? '⬆️' : '⬇️') : ''}
+              </th>
+              <th className="p-2 cursor-pointer" onClick={() => ordenarPor('nome')}>
+                Nome {ordenacao.campo === 'nome' ? (ordenacao.direcao === 'asc' ? '⬆️' : '⬇️') : ''}
+              </th>
+              <th className="p-2 cursor-pointer" onClick={() => ordenarPor('tipo')}>
+                Tipo {ordenacao.campo === 'tipo' ? (ordenacao.direcao === 'asc' ? '⬆️' : '⬇️') : ''}
+              </th>
               <th className="p-2 no-print">Editar</th>
               <th className="p-2 no-print">Excluir</th>
             </tr>
