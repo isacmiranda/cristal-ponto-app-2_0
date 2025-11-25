@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useMemo } from 'react';
+// import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useMemo } from 'react';
 
 export default function PinPage() {
   const [pin, setPin] = useState('');
@@ -12,6 +13,13 @@ export default function PinPage() {
   const [funcionarios, setFuncionarios] = useState([]);
   const [mostrarTipo, setMostrarTipo] = useState(false);
   const [funcionarioAtual, setFuncionarioAtual] = useState(null);
+
+  // 🔥 PRELOADER NOVO
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    const timer = setTimeout(() => setLoading(false), 2000);
+    return () => clearTimeout(timer);
+  }, []);
 
   const navigate = useNavigate();
 
@@ -153,13 +161,56 @@ export default function PinPage() {
 
   const teclas = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'C', '0', 'OK'];
 
+  // Preloader com animações
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-blue-900">
+        <div className="flex flex-col items-center animate-fade-in-out">
+          <img
+            src="/logo.png"
+            alt="Logo Cristal Acquacenter"
+            className="w-48 h-48 object-contain animate-scale-up"
+          />
+
+          <p className="text-white mt-6 text-xl font-semibold animate-pulse">
+            Carregando...
+          </p>
+        </div>
+
+        {/* ANIMAÇÕES */}
+        <style>
+          {`
+            @keyframes scaleUp {
+              0% { transform: scale(0.7); opacity: 0; }
+              100% { transform: scale(1); opacity: 1; }
+            }
+            @keyframes fadeInOut {
+              0% { opacity: 0; }
+              20% { opacity: 1; }
+              80% { opacity: 1; }
+              100% { opacity: 0; }
+            }
+            .animate-scale-up {
+              animation: scaleUp 1.2s ease forwards;
+            }
+            .animate-fade-in-out {
+              animation: fadeInOut 2s ease forwards;
+            }
+          `}
+        </style>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-900 to-blue-500 text-white flex flex-col items-center justify-center px-4 py-6">
+
       <div className="text-center mb-6">
         <div className="flex items-center justify-center gap-4 flex-wrap mb-2">
           <img src="/logo.png" alt="Logo Cristal Acquacenter" className="w-14 h-14 md:w-16 md:h-16 object-contain" />
           <h1 className="text-2xl md:text-3xl font-bold">Sistema de Ponto Cristal Acquacenter</h1>
         </div>
+
         <p className="text-lg md:text-xl flex items-center gap-4 justify-center">
           🕒 {horaAtual}
           {temperatura !== null && <span>{iconeClima} {temperatura}°C</span>}
@@ -213,10 +264,10 @@ export default function PinPage() {
       >
         ⚙️ Área Admin
       </button>
-       <footer className="text-white text-center py-2 text-sm shadow-md mt-10">
+
+      <footer className="text-white text-center py-2 text-sm shadow-md mt-10">
         Desenvolvido por <span className="font-semibold">Isac Miranda ©</span> - 2025
       </footer>
     </div>
-    
   );
 }
