@@ -14,10 +14,10 @@ export default function PinPage() {
   const [mostrarTipo, setMostrarTipo] = useState(false);
   const [funcionarioAtual, setFuncionarioAtual] = useState(null);
 
-  // 🔥 PRELOADER NOVO
+  //  PRELOADER
   const [loading, setLoading] = useState(true);
   useEffect(() => {
-    const timer = setTimeout(() => setLoading(false), 2000);
+    const timer = setTimeout(() => setLoading(false), 3000);
     return () => clearTimeout(timer);
   }, []);
 
@@ -161,45 +161,130 @@ export default function PinPage() {
 
   const teclas = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'C', '0', 'OK'];
 
-  // Preloader com animações
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-blue-900">
-        <div className="flex flex-col items-center animate-fade-in-out">
+  // Preloader modernizado com 3 segundos de animação
+ if (loading) {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-900 via-blue-700 to-blue-900 relative overflow-hidden">
+      {/* Efeito de partículas animadas */}
+      <div className="absolute inset-0">
+        {[...Array(15)].map((_, i) => (
+          <div
+            key={i}
+            className="absolute rounded-full bg-white/20 animate-float"
+            style={{
+              width: `${Math.random() * 30 + 10}px`,
+              height: `${Math.random() * 30 + 10}px`,
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+              animationDelay: `${Math.random() * 2}s`,
+              animationDuration: `${Math.random() * 3 + 2}s`
+            }}
+          />
+        ))}
+      </div>
+
+      <div className="flex flex-col items-center z-10">
+        {/* Logo com múltiplas animações */}
+        <div className="relative">
           <img
             src="/logo.png"
             alt="Logo Cristal Acquacenter"
-            className="w-48 h-48 object-contain animate-scale-up"
+            className="w-48 h-48 object-contain animate-logo-glow"
           />
-
-          <p className="text-white mt-6 text-xl font-semibold animate-pulse">
-            Carregando...
-          </p>
+          <div className="absolute inset-0 w-48 h-48 bg-blue-400/30 rounded-full animate-ping-slow" />
         </div>
 
-        {/* ANIMAÇÕES */}
-        <style>
-          {`
-            @keyframes scaleUp {
-              0% { transform: scale(0.7); opacity: 0; }
-              100% { transform: scale(1); opacity: 1; }
-            }
-            @keyframes fadeInOut {
-              0% { opacity: 0; }
-              20% { opacity: 1; }
-              80% { opacity: 1; }
-              100% { opacity: 0; }
-            }
-            .animate-scale-up {
-              animation: scaleUp 1.2s ease forwards;
-            }
-            .animate-fade-in-out {
-              animation: fadeInOut 2s ease forwards;
-            }
-          `}
-        </style>
+        {/* Loading text com efeito de digitação - CENTRALIZADO */}
+        <div className="mt-8 text-center w-full max-w-md mx-auto">
+          <p className="text-white text-xl font-semibold mb-4 animate-typewriter">
+            O sistema de ponto está carregando...
+          </p>
+          
+          {/* Barra de progresso moderna - CENTRALIZADA */}
+          <div className="flex justify-center">
+            <div className="w-64 h-2 bg-white/30 rounded-full overflow-hidden">
+              <div className="h-full bg-white animate-progress-bar" />
+            </div>
+          </div>
+        </div>
+
+        {/* Loading dots animados - CENTRALIZADOS */}
+        <div className="flex justify-center space-x-2 mt-6">
+          <div className="w-3 h-3 bg-white rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
+          <div className="w-3 h-3 bg-white rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
+          <div className="w-3 h-3 bg-white rounded-full animate-bounce" style={{ animationDelay: '0.3s' }} />
+        </div>
       </div>
-    );
+
+      {/* ANIMAÇÕES CSS */}
+      <style>
+        {`
+          @keyframes logoGlow {
+            0%, 100% { 
+              transform: scale(1) rotate(0deg);
+              filter: drop-shadow(0 0 10px rgba(255,255,255,0.5));
+            }
+            50% { 
+              transform: scale(1.05) rotate(2deg);
+              filter: drop-shadow(0 0 20px rgba(255,255,255,0.8));
+            }
+          }
+
+          @keyframes typewriter {
+            from { width: 0; }
+            to { width: 100%; }
+          }
+
+          @keyframes progressBar {
+            0% { transform: translateX(-100%); }
+            50% { transform: translateX(0%); }
+            100% { transform: translateX(100%); }
+          }
+
+          @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(180deg); }
+          }
+
+          @keyframes pingSlow {
+            0% { transform: scale(1); opacity: 1; }
+            100% { transform: scale(2); opacity: 0; }
+          }
+
+          .animate-logo-glow {
+            animation: logoGlow 2s ease-in-out infinite;
+          }
+
+          .animate-typewriter {
+            overflow: hidden;
+            white-space: nowrap;
+            border-right: 2px solid white;
+            animation: typewriter 2s steps(40) 0.5s both,
+                       blink-caret 0.75s step-end infinite;
+          }
+
+          .animate-progress-bar {
+            animation: progressBar 6s ease-in-out infinite;
+          }
+
+          .animate-float {
+            animation: float linear infinite;
+          }
+
+          .animate-ping-slow {
+            animation: pingSlow 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+          }
+
+          @keyframes blink-caret {
+            from, to { border-color: transparent }
+            50% { border-color: white }
+          }
+        `}
+      </style>
+    </div>
+  );
+}
+    if (loading) {;
   }
 
   return (
