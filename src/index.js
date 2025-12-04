@@ -1,5 +1,5 @@
 // index.js
-import './index.css';  // Ou o nome do arquivo onde você adicionou as diretivas do Tailwind
+import './index.css';  
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';

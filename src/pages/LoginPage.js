@@ -10,7 +10,7 @@ export default function LoginPage() {
 
  
   const usuarioValido = 'admin';
-  const senhaValida = 'admin123';
+  const senhaValida = '@admin123';
 
   const handleLogin = () => {
     if (usuario === usuarioValido && senha === senhaValida) {
